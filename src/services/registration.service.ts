@@ -1,8 +1,8 @@
 import axios from "axios";
-import { AsistenteRegistration, EvaluadorRegistration, PonenteRegistration } from "../types/registrations";
+import type { AsistenteRegistration, EvaluadorRegistration, PonenteRegistration } from "../types/registrations";
 
 const api = axios.create({
-  baseURL: "http://localhost:3001",
+  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3001",
   timeout: 15000,
 });
 
@@ -21,9 +21,7 @@ export async function registerPonente(
   if (uploads?.archivoPonenciaPdf) formData.append("archivoPonenciaPdf", uploads.archivoPonenciaPdf);
   if (uploads?.cesionDerechosPdf) formData.append("cesionDerechosPdf", uploads.cesionDerechosPdf);
 
-  await api.post("/inscripciones/ponente", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  await api.post("/inscripciones/ponente", formData);
 }
 
 export async function registerEvaluador(
@@ -39,7 +37,5 @@ export async function registerEvaluador(
 
   if (uploads?.firmaDigitalPng) formData.append("firmaDigitalPng", uploads.firmaDigitalPng);
 
-  await api.post("/inscripciones/evaluador", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  await api.post("/inscripciones/evaluador", formData);
 }
