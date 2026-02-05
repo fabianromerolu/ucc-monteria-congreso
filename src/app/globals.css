@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+:root {
+  /* Paleta Congreso */
+  --congreso-primary: #F5E6D5; /* Crema / Arena */
+  --congreso-secondary: #037380; /* Teal Oscuro */
+  --congreso-tertiary: #08792e; /* Naranja Tierra */
+  --congreso-quaternary: #879A9C; /* Gris Azulado */
+
+  /* Derivados (para hover/active sin inventar hex cada vez) */
+  --congreso-secondary-dark: #037380;
+  --congreso-tertiary-dark: #08792e;
+
+  /* Texto */
+  --congreso-text-on-dark: #f5e6d5;
+  --congreso-text: #0f172a;
+
+  /* Superficies */
+  --congreso-surface: rgba(255, 255, 255, 0.78);
+  --congreso-border: rgba(15, 23, 42, 0.12);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--congreso-text);
+
+  /* Fondo con degradado de toda la paleta */
+  background: linear-gradient(
+    135deg,
+    var(--congreso-primary) 0%,
+    rgba(135, 154, 156, 0.45) 35%,
+    rgba(31, 114, 123, 0.35) 70%,
+    rgba(203, 128, 81, 0.35) 100%
+  );
+
+  /* Se ve pro: */
+  background-attachment: fixed;
+}
