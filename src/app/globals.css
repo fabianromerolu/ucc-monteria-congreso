@@ -4,12 +4,12 @@
   /* Paleta Congreso */
   --congreso-primary: #F5E6D5; /* Crema / Arena */
   --congreso-secondary: #037380; /* Teal Oscuro */
-  --congreso-tertiary: #08792e; /* Naranja Tierra */
+  --congreso-tertiary: #2fc412; /* Naranja Tierra */
   --congreso-quaternary: #879A9C; /* Gris Azulado */
 
   /* Derivados (para hover/active sin inventar hex cada vez) */
   --congreso-secondary-dark: #037380;
-  --congreso-tertiary-dark: #08792e;
+  --congreso-tertiary-dark: #2fc412;
 
   /* Texto */
   --congreso-text-on-dark: #f5e6d5;
