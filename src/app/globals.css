@@ -1,25 +1,35 @@
 @import "tailwindcss";
 
 :root {
-  /* Paleta Congreso */
-  --congreso-primary: #F5E6D5; /* Crema / Arena */
-  --congreso-secondary: #037380; /* Teal Oscuro */
-  --congreso-tertiary: #2fc412; /* Naranja Tierra */
-  --congreso-quaternary: #879A9C; /* Gris Azulado */
-
-  /* Derivados (para hover/active sin inventar hex cada vez) */
-  --congreso-secondary-dark: #037380;
-  --congreso-tertiary-dark: #2fc412;
+  /* Base */
+  --congreso-primary: #7707ac;
 
   /* Texto */
-  --congreso-text-on-dark: #f5e6d5;
-  --congreso-text: #0f172a;
+  --congreso-text: #1f1b24;
+  --congreso-text-muted: rgba(31, 27, 36, 0.72);
+  --congreso-text-on-dark: rgba(255, 255, 255, 0.92);
+  --congreso-text-on-dark-muted: rgba(255, 255, 255, 0.78);
 
   /* Superficies */
-  --congreso-surface: rgba(255, 255, 255, 0.78);
-  --congreso-border: rgba(15, 23, 42, 0.12);
+  --congreso-surface: #ffffff;
+  --congreso-surface-muted: #faf7ff;
+  --congreso-border: rgba(137, 0, 201, 0.18);
+
+  /* =========================
+     Botones (unificados)
+     ========================= */
+  --btn-bg: var(--congreso-primary);
+  --btn-border: var(--congreso-primary);
+  --btn-text: #ffffff;
+
+  --btn-hover-bg: #ffffff;
+  --btn-hover-text: var(--congreso-primary);
+  --btn-hover-border: var(--congreso-primary);
+
+  --btn-active-bg: rgba(255, 255, 255, 0.92);
 }
 
+/* ===== Fondo “lava lamp” ===== */
 html,
 body {
   height: 100%;
@@ -29,15 +39,177 @@ body {
   margin: 0;
   color: var(--congreso-text);
 
-  /* Fondo con degradado de toda la paleta */
-  background: linear-gradient(
-    135deg,
-    var(--congreso-primary) 0%,
-    rgba(135, 154, 156, 0.45) 35%,
-    rgba(31, 114, 123, 0.35) 70%,
-    rgba(203, 128, 81, 0.35) 100%
-  );
+  /* base de respaldo */
+  background: #f6f0ff;
+  overflow-x: hidden;
+}
 
-  /* Se ve pro: */
-  background-attachment: fixed;
+/* capa animada */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  z-index: -1;
+  filter: blur(40px);
+  opacity: 0.95;
+
+  background:
+    radial-gradient(circle at 20% 20%, rgba(137, 0, 201, 0.38), transparent 55%),
+    radial-gradient(circle at 80% 30%, rgba(165, 107, 255, 0.42), transparent 58%),
+    radial-gradient(circle at 35% 80%, rgba(91, 45, 145, 0.35), transparent 60%),
+    radial-gradient(circle at 85% 85%, rgba(137, 0, 201, 0.28), transparent 62%);
+
+  animation: lavaMove 14s ease-in-out infinite;
+}
+
+/* un segundo “blob” para movimiento más orgánico */
+body::after {
+  content: "";
+  position: fixed;
+  inset: -25%;
+  z-index: -1;
+  filter: blur(55px);
+  opacity: 0.75;
+
+  background:
+    radial-gradient(circle at 60% 55%, rgba(137, 0, 201, 0.20), transparent 55%),
+    radial-gradient(circle at 25% 65%, rgba(165, 107, 255, 0.22), transparent 58%),
+    radial-gradient(circle at 75% 20%, rgba(91, 45, 145, 0.18), transparent 60%);
+
+  animation: lavaMove2 18s ease-in-out infinite;
+}
+
+@keyframes lavaMove {
+  0%   { transform: translate3d(-2%, -1%, 0) scale(1.0) rotate(0deg); }
+  50%  { transform: translate3d(2%,  2%, 0) scale(1.05) rotate(6deg); }
+  100% { transform: translate3d(-2%, -1%, 0) scale(1.0) rotate(0deg); }
+}
+
+@keyframes lavaMove2 {
+  0%   { transform: translate3d(2%,  1%, 0) scale(1.02) rotate(0deg); }
+  50%  { transform: translate3d(-2%, -2%, 0) scale(1.08) rotate(-7deg); }
+  100% { transform: translate3d(2%,  1%, 0) scale(1.02) rotate(0deg); }
+}
+
+/* =========================
+   Botones globales
+   ========================= */
+.btn {
+  min-width: 130px;
+  height: 42px;
+  padding: 0 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 999px; /* fully rounded */
+  outline: none;
+  border: 2px solid transparent;
+}
+
+.btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(137, 0, 201, 0.28);
+}
+
+.btn-primary {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border-color: var(--btn-border);
+}
+
+.btn-primary:hover {
+  background: var(--btn-hover-bg);
+  color: var(--btn-hover-text);
+  border-color: var(--btn-hover-border);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  background: var(--btn-active-bg);
+  transform: translateY(0px);
+}
+
+.btn-outline {
+  background: transparent;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.btn-outline:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.75);
+}
+
+.btn-outline:active {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+/* =========================
+   Formularios (look & feel)
+   ========================= */
+
+.form-shell {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--congreso-border);
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+  backdrop-filter: blur(10px);
+}
+
+@media (min-width: 768px) {
+  .form-shell { padding: 22px; }
+}
+
+.form-note {
+  border: 1px solid var(--congreso-border);
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 16px;
+  padding: 14px;
+  backdrop-filter: blur(10px);
+}
+
+.form-input,
+.form-select,
+.form-textarea,
+.form-file {
+  width: 100%;
+  border: 1px solid var(--congreso-border);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.92);
+  color: var(--congreso-text);
+  outline: none;
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+.form-input,
+.form-select {
+  height: 44px;
+  padding: 0 12px;
+}
+
+.form-textarea {
+  min-height: 120px;
+  padding: 12px;
+  resize: vertical;
+}
+
+.form-file {
+  padding: 10px 12px;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus,
+.form-file:focus {
+  border-color: rgba(137, 0, 201, 0.45);
+  box-shadow: 0 0 0 3px rgba(165, 107, 255, 0.30);
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: rgba(31, 27, 36, 0.55);
 }

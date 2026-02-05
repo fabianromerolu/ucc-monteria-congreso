@@ -1,146 +1,101 @@
 export default function Hero() {
   return (
-    <div className="relative mt-10 overflow-visible md:mt-12">
-      {/* Medallón + líneas decorativas */}
-      <div className="pointer-events-none absolute left-1/2 top-0 z-[90] -translate-x-1/2 -translate-y-[42%]">
-        <div className="relative flex items-center justify-center">
-          {/* Líneas izquierda */}
-          <div className="absolute right-full mr-6 flex flex-col items-end gap-2">
-            <span className="h-[2px] w-40 rounded-full bg-white/80" />
-            <span className="h-[2px] w-28 rounded-full bg-white/60" />
-            <span className="h-[2px] w-16 rounded-full bg-white/40" />
+    <div className="relative overflow-visible">
+      <section
+        className="relative z-10 overflow-hidden rounded-3xl border"
+        style={{ borderColor: "var(--congreso-border)" }}
+      >
+        <div className="grid md:grid-cols-2">
+          {/* PANEL IZQUIERDO — IMAGEN */}
+          <div
+            className="
+              relative flex items-center justify-center
+              px-5 py-6 md:px-8 md:py-7
+              min-h-[410px] md:min-h-[414px]
+            "
+            style={{ background: "#ffffff" }}
+          >
+            <div className="w-full max-w-[560px]">
+              <div className="relative mx-auto aspect-[4/5] w-full max-w-[460px]">
+                <img
+                  src="/title-event.jpeg"
+                  alt="Título del evento"
+                  className="absolute inset-0 h-full w-full object-contain"
+                  style={{ filter: "contrast(1.02) saturate(1.02)" }}
+                />
+              </div>
+            </div>
+
+            <div
+              className="pointer-events-none absolute inset-y-0 right-0 hidden w-px md:block"
+              style={{ background: "rgba(0,0,0,0.08)" }}
+            />
           </div>
 
-          {/* Medallón central */}
+          {/* PANEL DERECHO — MORADO */}
           <div
-            className="relative grid place-items-center rounded-full"
-            style={{
-              width: "clamp(88px, 9vw, 128px)",
-              height: "clamp(88px, 9vw, 128px)",
-              background:
-                "radial-gradient(circle at 30% 25%, rgba(255,255,255,.98) 0%, rgba(245,230,213,.96) 55%, rgba(255,255,255,.96) 100%)",
-              border: "1px solid rgba(0,0,0,.12)",
-              boxShadow: "0 14px 28px rgba(0,0,0,.18)",
-            }}
+            className="
+              relative flex items-center
+              px-6 py-7 md:px-10 md:py-7
+              min-h-[410px] md:min-h-[414px]
+            "
+            style={{ background: "var(--congreso-primary)" }}
           >
             <div
-              className="absolute inset-[9px] rounded-full"
+              className="pointer-events-none absolute inset-0 opacity-[0.10]"
               style={{
-                border: "1px solid rgba(0,0,0,.10)",
-                boxShadow: "inset 0 0 0 1px rgba(255,255,255,.35)",
+                backgroundImage:
+                  "radial-gradient(circle at 30% 25%, rgba(255,255,255,.35), transparent 48%), radial-gradient(circle at 85% 80%, rgba(255,255,255,.20), transparent 52%)",
               }}
             />
-            <img
-              src="/logo-evento.png"
-              alt="Logo del evento"
-              className="object-contain"
-              style={{
-                width: "78%",
-                height: "78%",
-                imageRendering: "auto",
-                filter: "contrast(1.08) saturate(1.05)",
-              }}
-            />
-          </div>
 
-          {/* Líneas derecha */}
-          <div className="absolute left-full ml-6 flex flex-col items-start gap-2">
-            <span className="h-[2px] w-40 rounded-full bg-white/80" />
-            <span className="h-[2px] w-28 rounded-full bg-white/60" />
-            <span className="h-[2px] w-16 rounded-full bg-white/40" />
-          </div>
-        </div>
-      </div>
+            <div className="relative max-w-xl text-white">
+              <p className="text-xs/6 tracking-wide uppercase opacity-95">
+                Universidad Cooperativa de Colombia • Campus Montería
+              </p>
 
-      {/* HERO */}
-      <section
-        className="group relative z-10 overflow-hidden rounded-3xl border"
-        style={{
-          borderColor: "var(--congreso-border)",
-          color: "var(--congreso-text)",
-        }}
-      >
-        {/* Glow alrededor */}
-        <div
-          className="pointer-events-none absolute -inset-[10px] rounded-[28px] opacity-70 blur-[18px]"
-          style={{
-            backgroundImage:
-              "linear-gradient(135deg, rgba(31,114,123,.55) 0%, rgba(135,154,156,.45) 45%, rgba(203,128,81,.55) 100%)",
-            backgroundSize: "220% 220%",
-            animation: "heroGlow 8s ease-in-out infinite",
-          }}
-        />
+              <p className="mt-4 md:text-lg opacity-85">
+                Espacio académico para la socialización de proyectos de investigación desarrollados por
+                docentes investigadores, semilleros, estudiantes de pregrado y posgrado, jóvenes investigadores
+                y demás actores vinculados a las instituciones adscritas al Nodo Región Caribe.
+              </p>
 
-        {/* Fondo vivo */}
-        <div
-          className="absolute inset-0 bg-[length:220%_220%] opacity-95"
-          style={{
-            backgroundImage:
-              "linear-gradient(135deg, var(--congreso-secondary) 0%, var(--congreso-quaternary) 45%, var(--congreso-tertiary) 100%)",
-            animation: "heroGradient 8s ease-in-out infinite",
-          }}
-        />
-
-        {/* Textura */}
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.18]"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 10% 15%, rgba(255,255,255,.55), transparent 45%), radial-gradient(circle at 85% 80%, rgba(255,255,255,.35), transparent 40%)",
-          }}
-        />
-
-        {/* Contenido */}
-        <div className="relative px-6 pb-16 pt-16 md:px-10 md:pb-14 md:pt-20 text-center">
-          <p className="text-xs/6 tracking-wide uppercase opacity-90">
-            Universidad Cooperativa de Colombia • Campus Montería
-          </p>
-
-          <h1 className="mx-auto mt-3 max-w-4xl text-3xl font-bold tracking-tight md:text-5xl">
-            XX Encuentro del Nodo Caribe de la Red de Investigación Jurídica y Socio jurídica
-          </h1>
-
-          <p className="mx-auto mt-4 max-w-3xl opacity-90 md:text-lg">
-            Espacio académico para la socialización de proyectos de investigación desarrollados por docentes
-            investigadores, semilleros, estudiantes de pregrado y posgrado, jóvenes investigadores y demás
-            actores vinculados a las instituciones adscritas al Nodo Región Caribe.
-          </p>
-
-          <div className="mt-7 flex flex-wrap justify-center gap-3">
-            <a
-              href="#inscripciones"
-              className="rounded-xl px-5 py-2.5 text-sm font-semibold transition hover:opacity-95"
-              style={{
-                background: "var(--congreso-primary)",
-                color: "var(--congreso-secondary)",
-              }}
-            >
-              Inscribirme
-            </a>
-
-            <a
-              href="#cronograma"
-              className="rounded-xl border px-5 py-2.5 text-sm font-semibold transition hover:bg-white/10"
-              style={{ borderColor: "rgba(255,255,255,.35)" }}
-            >
-              Ver cronograma
-            </a>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <a href="#inscripciones" className="btn hero-btn-primary">
+                  Inscribirme
+                </a>
+                <a href="#cronograma" className="btn hero-btn-outline">
+                  Ver cronograma
+                </a>
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Glow inferior */}
-        <div className="pointer-events-none absolute -bottom-24 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-white/10 blur-3xl" />
 
         <style>{`
-          @keyframes heroGradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+          .hero-btn-primary {
+            background: #ffffff;
+            color: var(--congreso-primary);
+            border: 2px solid #ffffff;
           }
-          @keyframes heroGlow {
-            0% { background-position: 0% 50%; opacity: .60; }
-            50% { background-position: 100% 50%; opacity: .78; }
-            100% { background-position: 0% 50%; opacity: .60; }
+          .hero-btn-primary:hover {
+            background: var(--congreso-primary);
+            color: #ffffff;
+            border-color: #ffffff;
+          }
+
+          .hero-btn-outline {
+            background: transparent;
+            color: #ffffff;
+            border: 2px solid rgba(255, 255, 255, 0.65);
+          }
+          .hero-btn-outline:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: #ffffff;
+          }
+
+          @media (max-width: 767px) {
+            section { border-radius: 24px; }
           }
         `}</style>
       </section>

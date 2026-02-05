@@ -86,8 +86,6 @@ export default function PonenteForm() {
         return;
       }
 
-      // ✅ NOMBRES CORRECTOS SEGÚN TU SERVICE:
-      // archivoPonenciaPdf + cesionDerechosPdf
       await registerPonente(form, {
         archivoPonenciaPdf: ponenciaPdf,
         cesionDerechosPdf: cesionPdf,
@@ -106,13 +104,17 @@ export default function PonenteForm() {
   }
 
   return (
-    <form className="grid gap-4" onSubmit={onSubmit}>
+    <form className="grid gap-4 form-shell" onSubmit={onSubmit}>
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={() => window.history.back()}
-          className="rounded-xl border px-3 py-2 text-sm font-semibold transition hover:bg-black/5"
-          style={{ borderColor: "var(--congreso-border)" }}
+          className="btn btn-outline"
+          style={{
+            borderColor: "rgba(0,0,0,0.18)",
+            color: "var(--congreso-text)",
+            background: "rgba(255,255,255,0.6)",
+          }}
         >
           ← Regresar
         </button>
@@ -120,10 +122,7 @@ export default function PonenteForm() {
         <span className="text-xs opacity-75">Campos marcados con * son obligatorios.</span>
       </div>
 
-      <div
-        className="rounded-2xl border p-4 text-sm"
-        style={{ background: "rgba(245,230,213,.6)", borderColor: "var(--congreso-border)" }}
-      >
+      <div className="form-note text-sm">
         <p className="font-semibold">Documentos para ponentes</p>
         <p className="mt-1 opacity-80">
           Descarga los formatos en Word, diligéncialos y súbelos en PDF.
@@ -134,7 +133,7 @@ export default function PonenteForm() {
             href="/formatos_forms/form-ponente.doc"
             download
             className="inline-block underline"
-            style={{ color: "var(--congreso-secondary)" }}
+            style={{ color: "var(--congreso-primary)" }}
           >
             Descargar formato de ponencia (Word)
           </a>
@@ -142,7 +141,7 @@ export default function PonenteForm() {
             href="/formatos_forms/form-cesion_derechos.docx"
             download
             className="inline-block underline"
-            style={{ color: "var(--congreso-secondary)" }}
+            style={{ color: "var(--congreso-primary)" }}
           >
             Descargar cesión de derechos (Word)
           </a>
@@ -202,14 +201,20 @@ export default function PonenteForm() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <SelectField
-          label="Línea temática (provisional)"
+          label="Eje temático"
           value={form.lineaTematica}
           onChange={(v) => set("lineaTematica", v)}
           required
           options={[
-            { value: "1", label: "1" },
-            { value: "2", label: "2" },
-            { value: "3", label: "3" },
+            { value: "1" as LineaTematica, label: "Derecho público y privado" },
+            { value: "2" as LineaTematica, label: "Derecho internacional: soberanía y Estado" },
+            {
+              value: "3" as LineaTematica,
+              label: "Ética jurídica · Métodos de resolución de conflictos · Filosofía del Derecho",
+            },
+            { value: "4" as LineaTematica, label: "Legal Tech · Educación · IA" },
+            { value: "5" as LineaTematica, label: "Derechos humanos · Género · Cultura de paz · Medio ambiente" },
+            { value: "6" as LineaTematica, label: "Derecho y sociedad · Emprendimiento y empresa" },
           ]}
         />
         <Field
@@ -244,7 +249,9 @@ export default function PonenteForm() {
         helper="Sube la cesión de derechos firmada en PDF."
       />
 
-      <SubmitButton loading={loading}>Enviar registro</SubmitButton>
+      <div className="pt-1">
+        <SubmitButton loading={loading}>Enviar registro</SubmitButton>
+      </div>
 
       <p className="text-xs opacity-75">
         El borrador se guarda automáticamente (los archivos no se guardan en el borrador).

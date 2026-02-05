@@ -80,7 +80,6 @@ export default function EvaluadorForm() {
         return;
       }
 
-      // ✅ NOMBRE CORRECTO SEGÚN TU SERVICE: firmaDigitalPng
       await registerEvaluador(form, { firmaDigitalPng: firmaDigital });
 
       toast.success("Registro enviado (backend en :3001).");
@@ -97,13 +96,17 @@ export default function EvaluadorForm() {
   const showDocencia = form.esDocente === "si";
 
   return (
-    <form className="grid gap-4" onSubmit={onSubmit}>
+    <form className="grid gap-4 form-shell" onSubmit={onSubmit}>
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={() => window.history.back()}
-          className="rounded-xl border px-3 py-2 text-sm font-semibold transition hover:bg-black/5"
-          style={{ borderColor: "var(--congreso-border)" }}
+          className="btn btn-outline"
+          style={{
+            borderColor: "rgba(0,0,0,0.18)",
+            color: "var(--congreso-text)",
+            background: "rgba(255,255,255,0.6)",
+          }}
         >
           ← Regresar
         </button>
@@ -111,10 +114,8 @@ export default function EvaluadorForm() {
         <span className="text-xs opacity-75">Campos marcados con * son obligatorios.</span>
       </div>
 
-      <div
-        className="rounded-2xl border p-4 text-sm"
-        style={{ background: "rgba(245,230,213,.6)", borderColor: "var(--congreso-border)" }}
-      >
+      {/* Bloque info */}
+      <div className="form-note text-sm">
         <p className="font-semibold">Firma digital del evaluador</p>
         <p className="mt-1 opacity-80">
           Para la validación del proceso, se requiere la firma digital en formato PNG.
@@ -206,7 +207,9 @@ export default function EvaluadorForm() {
         helper="Sube tu firma digital en PNG."
       />
 
-      <SubmitButton loading={loading}>Enviar registro</SubmitButton>
+      <div className="pt-1">
+        <SubmitButton loading={loading}>Enviar registro</SubmitButton>
+      </div>
 
       <p className="text-xs opacity-75">
         El borrador se guarda automáticamente (el archivo no se guarda en el borrador).

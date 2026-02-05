@@ -61,14 +61,18 @@ export default function AsistenteForm() {
     }
   }
 
-  return (
-    <form className="grid gap-4" onSubmit={onSubmit}>
+   return (
+    <form className="grid gap-4 form-shell" onSubmit={onSubmit}>
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={() => window.history.back()}
-          className="rounded-xl border px-3 py-2 text-sm font-semibold transition hover:bg-black/5"
-          style={{ borderColor: "var(--congreso-border)" }}
+          className="btn btn-outline"
+          style={{
+            borderColor: "rgba(0,0,0,0.18)",
+            color: "var(--congreso-text)",
+            background: "rgba(255,255,255,0.6)",
+          }}
         >
           ← Regresar
         </button>
@@ -117,7 +121,9 @@ export default function AsistenteForm() {
         <Field label="Semestre" value={form.semestre} onChange={(v) => set("semestre", v)} required />
       </div>
 
-      <SubmitButton loading={loading}>Enviar inscripción</SubmitButton>
+      <div className="pt-1">
+        <SubmitButton loading={loading}>Enviar inscripción</SubmitButton>
+      </div>
 
       <p className="text-xs opacity-75">
         Nota: se guarda automáticamente como borrador en tu navegador.

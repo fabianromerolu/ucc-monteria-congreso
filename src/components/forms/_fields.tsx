@@ -2,6 +2,19 @@
 
 import * as React from "react";
 
+/** Helpers visuales (sin librerías, sin eventos raros) */
+function Label({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <label className="grid gap-1 text-sm">{children}</label>;
+}
+
+function Req({ required }: { required?: boolean }) {
+  return required ? <span className="opacity-70">*</span> : null;
+}
+
 export function Field({
   label,
   value,
@@ -18,9 +31,9 @@ export function Field({
   required?: boolean;
 }) {
   return (
-    <label className="grid gap-1 text-sm">
+    <Label>
       <span className="font-medium">
-        {label} {required ? <span className="opacity-70">*</span> : null}
+        {label} <Req required={required} />
       </span>
       <input
         type={type}
@@ -28,12 +41,9 @@ export function Field({
         required={required}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="h-10 rounded-xl border bg-white/85 px-3 outline-none focus:ring-2"
-        style={{
-          borderColor: "var(--congreso-border)",
-        }}
+        className="form-input"
       />
-    </label>
+    </Label>
   );
 }
 
@@ -51,16 +61,15 @@ export function SelectField<T extends string>({
   required?: boolean;
 }) {
   return (
-    <label className="grid gap-1 text-sm">
+    <Label>
       <span className="font-medium">
-        {label} {required ? <span className="opacity-70">*</span> : null}
+        {label} <Req required={required} />
       </span>
       <select
         value={value}
         required={required}
         onChange={(e) => onChange(e.target.value as T)}
-        className="h-10 rounded-xl border bg-white/85 px-3 outline-none focus:ring-2"
-        style={{ borderColor: "var(--congreso-border)" }}
+        className="form-select"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -68,7 +77,7 @@ export function SelectField<T extends string>({
           </option>
         ))}
       </select>
-    </label>
+    </Label>
   );
 }
 
@@ -86,19 +95,18 @@ export function Textarea({
   required?: boolean;
 }) {
   return (
-    <label className="grid gap-1 text-sm">
+    <Label>
       <span className="font-medium">
-        {label} {required ? <span className="opacity-70">*</span> : null}
+        {label} <Req required={required} />
       </span>
       <textarea
         value={value}
         required={required}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="min-h-28 rounded-xl border bg-white/85 p-3 outline-none focus:ring-2"
-        style={{ borderColor: "var(--congreso-border)" }}
+        className="form-textarea"
       />
-    </label>
+    </Label>
   );
 }
 
@@ -116,9 +124,9 @@ export function FileField({
   helper?: string;
 }) {
   return (
-    <label className="grid gap-1 text-sm">
+    <Label>
       <span className="font-medium">
-        {label} {required ? <span className="opacity-70">*</span> : null}
+        {label} <Req required={required} />
       </span>
       {helper ? <span className="text-xs opacity-75">{helper}</span> : null}
       <input
@@ -126,10 +134,9 @@ export function FileField({
         accept={accept}
         required={required}
         onChange={(e) => onChange(e.target.files?.[0])}
-        className="rounded-xl border bg-white/85 p-2"
-        style={{ borderColor: "var(--congreso-border)" }}
+        className="form-file"
       />
-    </label>
+    </Label>
   );
 }
 
@@ -141,15 +148,7 @@ export function SubmitButton({
   children: React.ReactNode;
 }) {
   return (
-    <button
-      type="submit"
-      disabled={loading}
-      className="mt-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:opacity-60"
-      style={{
-        background: "var(--congreso-secondary)",
-        color: "var(--congreso-text-on-dark)",
-      }}
-    >
+    <button type="submit" disabled={loading} className="btn btn-primary w-full md:w-auto disabled:opacity-60">
       {loading ? "Enviando..." : children}
     </button>
   );
