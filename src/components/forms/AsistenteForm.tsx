@@ -4,7 +4,7 @@ import * as React from "react";
 import toast from "react-hot-toast";
 
 import { Field, SelectField, SubmitButton } from "./_fields";
-import { AsistenteRegistration } from "@/src/types/registrations";
+import type { AsistenteRegistration, TipoDocumento } from "@/src/types/registrations";
 import { registerAsistente } from "@/src/services/registration.service";
 
 const LS_KEY = "congreso:asistente:draft";
@@ -33,7 +33,11 @@ export default function AsistenteForm() {
     if (!raw) return;
     try {
       const parsed = JSON.parse(raw) as AsistenteRegistration;
-      setForm(parsed);
+      setForm({
+        ...initial,
+        ...parsed,
+        tipoDocumento: (parsed.tipoDocumento ?? "CC") as TipoDocumento,
+      });
     } catch {}
   }, []);
 
@@ -51,17 +55,17 @@ export default function AsistenteForm() {
 
     try {
       await registerAsistente(form);
-      toast.success("Inscripción enviada (backend en :3001).");
+      toast.success("Inscripción enviada.");
       localStorage.removeItem(LS_KEY);
       setForm(initial);
     } catch {
-      toast.error("No se pudo enviar a :3001 (normal si el backend aún no existe). Guardado en borrador.");
+      toast.error("No se pudo enviar. El borrador queda guardado.");
     } finally {
       setLoading(false);
     }
   }
 
-   return (
+  return (
     <form className="grid gap-4 form-shell" onSubmit={onSubmit}>
       <div className="flex items-center justify-between gap-3">
         <button
@@ -125,9 +129,7 @@ export default function AsistenteForm() {
         <SubmitButton loading={loading}>Enviar inscripción</SubmitButton>
       </div>
 
-      <p className="text-xs opacity-75">
-        Nota: se guarda automáticamente como borrador en tu navegador.
-      </p>
+      <p className="text-xs opacity-75">Nota: se guarda automáticamente como borrador en tu navegador.</p>
     </form>
   );
 }

@@ -1,8 +1,7 @@
-export type LineaTematica = "1" | "2" | "3";
 export type TipoDocumento = "CC" | "TI" | "CE" | "PAS";
-export type SiNo = "si" | "no";
+export type LineaTematica = "1" | "2" | "3" | "4" | "5" | "6";
 
-export interface BasePerson {
+export type AsistenteRegistration = {
   nombres: string;
   apellidos: string;
   tipoDocumento: TipoDocumento;
@@ -18,21 +17,62 @@ export interface BasePerson {
 
   programa: string;
   semestre: string;
-}
+};
 
-/** Payloads (solo datos “JSON friendly”) */
-export type AsistenteRegistration = BasePerson;
+export type EvaluadorRegistration = {
+  nombres: string;
+  apellidos: string;
+  tipoDocumento: TipoDocumento;
+  documento: string;
+  email: string;
+  telefono: string;
 
-export interface PonenteRegistration extends BasePerson {
-  tituloPonencia: string;
-  resumen: string;
-  lineaTematica: LineaTematica;
-}
+  pais: string;
+  ciudad: string;
 
-export interface EvaluadorRegistration extends BasePerson {
+  institucion: string;
+  universidad: string;
+
+  programa: string;
+  semestre: string;
+
   profesion: string;
   posgrado: string;
   universidadPosgrado: string;
-  esDocente: SiNo;
+  esDocente: "si" | "no";
   programaDocencia?: string;
-}
+};
+
+export type PonenteRegistration = {
+  // Ponente 1
+  nombres: string;
+  apellidos: string;
+  tipoDocumento: TipoDocumento;
+  documento: string;
+  email: string;
+  telefono: string;
+
+  // Ponente 2 (opcional)
+  nombres2?: string;
+  apellidos2?: string;
+  tipoDocumento2?: TipoDocumento;
+  documento2?: string;
+  email2?: string;
+  telefono2?: string;
+
+  pais: string;
+  ciudad: string;
+
+  institucion: string;
+  universidad: string;
+
+  programa: string;
+  semestre: string;
+
+  grupoInvestigacion?: string;
+  semillero?: string;
+
+  tituloPonencia: string;
+  resumen: string;
+  lineaTematica: LineaTematica;
+};

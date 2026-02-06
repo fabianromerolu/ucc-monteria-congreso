@@ -4,7 +4,7 @@ import * as React from "react";
 import toast from "react-hot-toast";
 
 import { Field, SelectField, Textarea, FileField, SubmitButton } from "./_fields";
-import { LineaTematica, PonenteRegistration } from "@/src/types/registrations";
+import type { LineaTematica, PonenteRegistration, TipoDocumento } from "@/src/types/registrations";
 import { registerPonente } from "@/src/services/registration.service";
 
 const LS_KEY = "congreso:ponente:draft";
@@ -15,12 +15,21 @@ type PonenteDraft = PonenteRegistration & {
 };
 
 const initial: PonenteRegistration = {
+  // Ponente 1
   nombres: "",
   apellidos: "",
   tipoDocumento: "CC",
   documento: "",
   email: "",
   telefono: "",
+
+  // Ponente 2 (opcional)
+  nombres2: "",
+  apellidos2: "",
+  tipoDocumento2: "CC",
+  documento2: "",
+  email2: "",
+  telefono2: "",
 
   pais: "",
   ciudad: "",
@@ -31,10 +40,23 @@ const initial: PonenteRegistration = {
   programa: "",
   semestre: "",
 
+  grupoInvestigacion: "",
+  semillero: "",
+
   tituloPonencia: "",
   resumen: "",
   lineaTematica: "1",
 };
+
+function isPonente2Used(f: PonenteRegistration) {
+  return Boolean(
+    (f.nombres2 && f.nombres2.trim()) ||
+      (f.apellidos2 && f.apellidos2.trim()) ||
+      (f.documento2 && f.documento2.trim()) ||
+      (f.email2 && f.email2.trim()) ||
+      (f.telefono2 && f.telefono2.trim())
+  );
+}
 
 export default function PonenteForm() {
   const [form, setForm] = React.useState<PonenteRegistration>(initial);
@@ -53,6 +75,8 @@ export default function PonenteForm() {
         ...p,
         ...parsed,
         lineaTematica: (parsed.lineaTematica ?? "1") as LineaTematica,
+        tipoDocumento: (parsed.tipoDocumento ?? "CC") as TipoDocumento,
+        tipoDocumento2: (parsed.tipoDocumento2 ?? "CC") as TipoDocumento,
       }));
     } catch {}
   }, []);
@@ -86,18 +110,50 @@ export default function PonenteForm() {
         return;
       }
 
-      await registerPonente(form, {
-        archivoPonenciaPdf: ponenciaPdf,
-        cesionDerechosPdf: cesionPdf,
-      });
+      // Si el ponente 2 se usa, exigimos que esté completo.
+      if (isPonente2Used(form)) {
+        const required2: Array<keyof PonenteRegistration> = [
+          "nombres2",
+          "apellidos2",
+          "tipoDocumento2",
+          "documento2",
+          "email2",
+          "telefono2",
+        ];
+        const missing = required2.filter((k) => {
+          const v = form[k];
+          return v === undefined || v === null || String(v).trim() === "";
+        });
 
-      toast.success("Registro enviado (backend en :3001).");
+        if (missing.length) {
+          toast.error("Si agregas Ponente 2, completa todos sus campos.");
+          setLoading(false);
+          return;
+        }
+      }
+
+      await registerPonente(
+        {
+          ...form,
+          // limpia strings vacíos opcionales para que no “ensucien”
+          nombres2: form.nombres2?.trim() ? form.nombres2 : undefined,
+          apellidos2: form.apellidos2?.trim() ? form.apellidos2 : undefined,
+          documento2: form.documento2?.trim() ? form.documento2 : undefined,
+          email2: form.email2?.trim() ? form.email2 : undefined,
+          telefono2: form.telefono2?.trim() ? form.telefono2 : undefined,
+          grupoInvestigacion: form.grupoInvestigacion?.trim() ? form.grupoInvestigacion : undefined,
+          semillero: form.semillero?.trim() ? form.semillero : undefined,
+        },
+        { archivoPonenciaPdf: ponenciaPdf, cesionDerechosPdf: cesionPdf }
+      );
+
+      toast.success("Registro enviado.");
       localStorage.removeItem(LS_KEY);
       setForm(initial);
       setPonenciaPdf(undefined);
       setCesionPdf(undefined);
     } catch {
-      toast.error("No se pudo enviar a :3001. El borrador queda guardado.");
+      toast.error("No se pudo enviar. El borrador queda guardado.");
     } finally {
       setLoading(false);
     }
@@ -124,9 +180,7 @@ export default function PonenteForm() {
 
       <div className="form-note text-sm">
         <p className="font-semibold">Documentos para ponentes</p>
-        <p className="mt-1 opacity-80">
-          Descarga los formatos en Word, diligéncialos y súbelos en PDF.
-        </p>
+        <p className="mt-1 opacity-80">Descarga los formatos en Word, diligéncialos y súbelos en PDF.</p>
 
         <div className="mt-3 grid gap-2">
           <a
@@ -151,6 +205,11 @@ export default function PonenteForm() {
           {ponenciaPdf?.name ? <div>Ponencia PDF cargada: {ponenciaPdf.name}</div> : null}
           {cesionPdf?.name ? <div>Cesión PDF cargada: {cesionPdf.name}</div> : null}
         </div>
+      </div>
+
+      <div className="form-note text-sm">
+        <p className="font-semibold">Ponente 1 (obligatorio)</p>
+        <p className="mt-1 opacity-80">Información principal del ponente.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -179,18 +238,43 @@ export default function PonenteForm() {
         <Field label="Teléfono" value={form.telefono} onChange={(v) => set("telefono", v)} required />
       </div>
 
+      <div className="form-note text-sm">
+        <p className="font-semibold">Ponente 2 (opcional)</p>
+        <p className="mt-1 opacity-80">Si lo agregas, completa todos los campos.</p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Field label="Nombres (Ponente 2)" value={form.nombres2 ?? ""} onChange={(v) => set("nombres2", v)} />
+        <Field label="Apellidos (Ponente 2)" value={form.apellidos2 ?? ""} onChange={(v) => set("apellidos2", v)} />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <SelectField
+          label="Tipo de documento (Ponente 2)"
+          value={(form.tipoDocumento2 ?? "CC") as TipoDocumento}
+          onChange={(v) => set("tipoDocumento2", v)}
+          options={[
+            { value: "CC", label: "CC" },
+            { value: "TI", label: "TI" },
+            { value: "CE", label: "CE" },
+            { value: "PAS", label: "Pasaporte" },
+          ]}
+        />
+        <Field label="Documento (Ponente 2)" value={form.documento2 ?? ""} onChange={(v) => set("documento2", v)} />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Field label="Correo (Ponente 2)" type="email" value={form.email2 ?? ""} onChange={(v) => set("email2", v)} />
+        <Field label="Teléfono (Ponente 2)" value={form.telefono2 ?? ""} onChange={(v) => set("telefono2", v)} />
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="País" value={form.pais} onChange={(v) => set("pais", v)} required />
         <Field label="Ciudad" value={form.ciudad} onChange={(v) => set("ciudad", v)} required />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Field
-          label="Filiación institucional"
-          value={form.institucion}
-          onChange={(v) => set("institucion", v)}
-          required
-        />
+        <Field label="Filiación institucional" value={form.institucion} onChange={(v) => set("institucion", v)} required />
         <Field label="Universidad" value={form.universidad} onChange={(v) => set("universidad", v)} required />
       </div>
 
@@ -200,29 +284,34 @@ export default function PonenteForm() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
+        <Field
+          label="Grupo de investigación (opcional)"
+          value={form.grupoInvestigacion ?? ""}
+          onChange={(v) => set("grupoInvestigacion", v)}
+        />
+        <Field
+          label="Semillero (opcional)"
+          value={form.semillero ?? ""}
+          onChange={(v) => set("semillero", v)}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
         <SelectField
           label="Eje temático"
           value={form.lineaTematica}
-          onChange={(v) => set("lineaTematica", v)}
+          onChange={(v) => set("lineaTematica", v as LineaTematica)}
           required
           options={[
             { value: "1" as LineaTematica, label: "Derecho público y privado" },
             { value: "2" as LineaTematica, label: "Derecho internacional: soberanía y Estado" },
-            {
-              value: "3" as LineaTematica,
-              label: "Ética jurídica · Métodos de resolución de conflictos · Filosofía del Derecho",
-            },
+            { value: "3" as LineaTematica, label: "Ética jurídica · Métodos de resolución de conflictos · Filosofía del Derecho" },
             { value: "4" as LineaTematica, label: "Legal Tech · Educación · IA" },
             { value: "5" as LineaTematica, label: "Derechos humanos · Género · Cultura de paz · Medio ambiente" },
             { value: "6" as LineaTematica, label: "Derecho y sociedad · Emprendimiento y empresa" },
           ]}
         />
-        <Field
-          label="Título de la ponencia"
-          value={form.tituloPonencia}
-          onChange={(v) => set("tituloPonencia", v)}
-          required
-        />
+        <Field label="Título de la ponencia" value={form.tituloPonencia} onChange={(v) => set("tituloPonencia", v)} required />
       </div>
 
       <Textarea
@@ -253,9 +342,7 @@ export default function PonenteForm() {
         <SubmitButton loading={loading}>Enviar registro</SubmitButton>
       </div>
 
-      <p className="text-xs opacity-75">
-        El borrador se guarda automáticamente (los archivos no se guardan en el borrador).
-      </p>
+      <p className="text-xs opacity-75">El borrador se guarda automáticamente (los archivos no se guardan en el borrador).</p>
     </form>
   );
 }

@@ -16,7 +16,10 @@ export async function registerPonente(
 ): Promise<void> {
   const formData = new FormData();
 
-  Object.entries(data).forEach(([k, v]) => formData.append(k, String(v)));
+  Object.entries(data).forEach(([k, v]) => {
+    if (v === undefined || v === null) return;
+    formData.append(k, String(v));
+  });
 
   if (uploads?.archivoPonenciaPdf) formData.append("archivoPonenciaPdf", uploads.archivoPonenciaPdf);
   if (uploads?.cesionDerechosPdf) formData.append("cesionDerechosPdf", uploads.cesionDerechosPdf);
@@ -24,18 +27,7 @@ export async function registerPonente(
   await api.post("/inscripciones/ponente", formData);
 }
 
-export async function registerEvaluador(
-  data: EvaluadorRegistration,
-  uploads?: { firmaDigitalPng?: File }
-): Promise<void> {
-  const formData = new FormData();
-
-  Object.entries(data).forEach(([k, v]) => {
-    if (v === undefined) return;
-    formData.append(k, String(v));
-  });
-
-  if (uploads?.firmaDigitalPng) formData.append("firmaDigitalPng", uploads.firmaDigitalPng);
-
-  await api.post("/inscripciones/evaluador", formData);
+// ✅ Evaluador YA NO ES multipart
+export async function registerEvaluador(data: EvaluadorRegistration): Promise<void> {
+  await api.post("/inscripciones/evaluador", data);
 }
