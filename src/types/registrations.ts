@@ -1,6 +1,8 @@
 export type TipoDocumento = "CC" | "TI" | "CE" | "PAS";
 export type LineaTematica = "1" | "2" | "3" | "4" | "5" | "6";
 
+export type RolAsistente = "estudiante" | "docente" | "publico";
+
 export type AsistenteRegistration = {
   nombres: string;
   apellidos: string;
@@ -12,11 +14,13 @@ export type AsistenteRegistration = {
   pais: string;
   ciudad: string;
 
-  institucion: string;
-  universidad: string;
+  // para UX (no existe en el back, pero lo usamos para habilitar campos)
+  rol: RolAsistente;
 
-  programa: string;
-  semestre: string;
+  // opcionales en backend
+  universidad?: string;
+  programa?: string;
+  semestre?: string;
 };
 
 export type EvaluadorRegistration = {
@@ -30,17 +34,16 @@ export type EvaluadorRegistration = {
   pais: string;
   ciudad: string;
 
-  institucion: string;
+  // universidad del pregrado
   universidad: string;
-
-  programa: string;
-  semestre: string;
 
   profesion: string;
   posgrado: string;
   universidadPosgrado: string;
+
   esDocente: "si" | "no";
   programaDocencia?: string;
+  universidadDocencia?: string;
 };
 
 export type PonenteRegistration = {
@@ -63,11 +66,10 @@ export type PonenteRegistration = {
   pais: string;
   ciudad: string;
 
-  institucion: string;
-  universidad: string;
-
-  programa: string;
-  semestre: string;
+  // opcionales en backend
+  universidad?: string;
+  programa?: string;
+  semestre?: string;
 
   grupoInvestigacion?: string;
   semillero?: string;

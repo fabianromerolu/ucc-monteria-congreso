@@ -3,7 +3,7 @@
 import * as React from "react";
 import toast from "react-hot-toast";
 
-import { Field, SelectField, SubmitButton } from "./_fields";
+import { Field, SelectField, SubmitButton, Divider } from "./_fields";
 import type { EvaluadorRegistration, TipoDocumento } from "@/src/types/registrations";
 import { registerEvaluador } from "@/src/services/registration.service";
 
@@ -20,17 +20,14 @@ const initial: EvaluadorRegistration = {
   pais: "",
   ciudad: "",
 
-  institucion: "",
-  universidad: "",
-
-  programa: "",
-  semestre: "",
+  universidad: "", // pregrado
 
   profesion: "",
   posgrado: "",
   universidadPosgrado: "",
   esDocente: "no",
   programaDocencia: "",
+  universidadDocencia: "",
 };
 
 export default function EvaluadorForm() {
@@ -59,22 +56,26 @@ export default function EvaluadorForm() {
     setForm((p) => ({ ...p, [key]: value }));
   }
 
+  const showDocencia = form.esDocente === "si";
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // si NO es docente, no mandes programaDocencia
+      if (showDocencia) {
+        if (!form.programaDocencia?.trim() || !form.universidadDocencia?.trim()) {
+          toast.error("Si eres docente, indica programa y universidad donde dictas.");
+          setLoading(false);
+          return;
+        }
+      }
+
       const payload: EvaluadorRegistration = {
         ...form,
-        programaDocencia: form.esDocente === "si" ? (form.programaDocencia ?? "") : undefined,
+        programaDocencia: showDocencia ? form.programaDocencia : undefined,
+        universidadDocencia: showDocencia ? form.universidadDocencia : undefined,
       };
-
-      if (form.esDocente === "si" && !payload.programaDocencia?.trim()) {
-        toast.error("Si eres docente, indica el programa en el que dictas.");
-        setLoading(false);
-        return;
-      }
 
       await registerEvaluador(payload);
 
@@ -87,8 +88,6 @@ export default function EvaluadorForm() {
       setLoading(false);
     }
   }
-
-  const showDocencia = form.esDocente === "si";
 
   return (
     <form className="grid gap-4 form-shell" onSubmit={onSubmit}>
@@ -108,6 +107,11 @@ export default function EvaluadorForm() {
 
         <span className="text-xs opacity-75">Campos marcados con * son obligatorios.</span>
       </div>
+
+      <Divider
+        title="Registro de evaluador"
+        desc="Información profesional y académica. Si eres docente, agrega también dónde dictas clase."
+      />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Nombres" value={form.nombres} onChange={(v) => set("nombres", v)} required />
@@ -140,48 +144,55 @@ export default function EvaluadorForm() {
         <Field label="Ciudad" value={form.ciudad} onChange={(v) => set("ciudad", v)} required />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Filiación institucional" value={form.institucion} onChange={(v) => set("institucion", v)} required />
-        <Field label="Universidad" value={form.universidad} onChange={(v) => set("universidad", v)} required />
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Programa" value={form.programa} onChange={(v) => set("programa", v)} required />
-        <Field label="Semestre" value={form.semestre} onChange={(v) => set("semestre", v)} required />
-      </div>
+      <Field
+        label="Universidad (pregrado)"
+        value={form.universidad}
+        onChange={(v) => set("universidad", v)}
+        required
+        placeholder="Universidad donde cursaste el pregrado"
+      />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Profesión" value={form.profesion} onChange={(v) => set("profesion", v)} required />
-        <Field label="Especialidad / Maestría" value={form.posgrado} onChange={(v) => set("posgrado", v)} required />
+        <Field label="Posgrado" value={form.posgrado} onChange={(v) => set("posgrado", v)} required />
       </div>
+
+      <Field
+        label="Universidad del posgrado"
+        value={form.universidadPosgrado}
+        onChange={(v) => set("universidadPosgrado", v)}
+        required
+      />
+
+      <SelectField
+        label="¿Eres docente actualmente?"
+        value={form.esDocente}
+        onChange={(v) => set("esDocente", v)}
+        required
+        options={[
+          { value: "no", label: "No" },
+          { value: "si", label: "Sí" },
+        ]}
+      />
+
+      <Divider title="Docencia (solo si aplica)" desc="Se habilita si seleccionas “Sí”." />
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Field
-          label="Universidad del posgrado"
-          value={form.universidadPosgrado}
-          onChange={(v) => set("universidadPosgrado", v)}
-          required
-        />
-        <SelectField
-          label="¿Es docente?"
-          value={form.esDocente}
-          onChange={(v) => set("esDocente", v)}
-          required
-          options={[
-            { value: "no", label: "No" },
-            { value: "si", label: "Sí" },
-          ]}
-        />
-      </div>
-
-      {showDocencia ? (
         <Field
           label="Programa en el que dicta"
           value={form.programaDocencia ?? ""}
           onChange={(v) => set("programaDocencia", v)}
-          required
+          required={showDocencia}
+          disabled={!showDocencia}
         />
-      ) : null}
+        <Field
+          label="Universidad donde dicta"
+          value={form.universidadDocencia ?? ""}
+          onChange={(v) => set("universidadDocencia", v)}
+          required={showDocencia}
+          disabled={!showDocencia}
+        />
+      </div>
 
       <div className="pt-1">
         <SubmitButton loading={loading}>Enviar registro</SubmitButton>

@@ -18,10 +18,9 @@ export default function Hero() {
             <div className="w-full max-w-[560px]">
               <div className="relative mx-auto aspect-[4/5] w-full max-w-[460px]">
                 <img
-                  src="/title-event.jpeg"
+                  src="/title-event.png"
                   alt="Título del evento"
                   className="absolute inset-0 h-full w-full object-contain"
-                  style={{ filter: "contrast(1.02) saturate(1.02)" }}
                 />
               </div>
             </div>
@@ -35,9 +34,10 @@ export default function Hero() {
           {/* PANEL DERECHO — MORADO */}
           <div
             className="
-              relative flex items-center
+              relative flex items-center justify-center
               px-6 py-7 md:px-10 md:py-7
               min-h-[410px] md:min-h-[414px]
+              text-center
             "
             style={{ background: "var(--congreso-primary)" }}
           >
@@ -49,18 +49,46 @@ export default function Hero() {
               }}
             />
 
-            <div className="relative max-w-xl text-white">
-              <p className="text-xs/6 tracking-wide uppercase opacity-95">
+            <div className="relative w-full max-w-xl text-white">
+              <p className="text-xs tracking-wide uppercase opacity-95">
                 Universidad Cooperativa de Colombia • Campus Montería
               </p>
 
               <p className="mt-4 md:text-lg opacity-85">
-                Espacio académico para la socialización de proyectos de investigación desarrollados por
-                docentes investigadores, semilleros, estudiantes de pregrado y posgrado, jóvenes investigadores
-                y demás actores vinculados a las instituciones adscritas al Nodo Región Caribe.
+                Espacio académico para la socialización de proyectos de investigación desarrollados por docentes
+                investigadores, semilleros, estudiantes de pregrado y posgrado, jóvenes investigadores y demás
+                actores vinculados al Nodo Región Caribe.
               </p>
 
-              <div className="mt-6 flex flex-wrap gap-3">
+              {/* 📄 CARD CONVOCATORIA (SIN PREVIEW) */}
+              <div className="mt-6 mx-auto w-full max-w-[520px] rounded-2xl border border-white/25 bg-white/10 p-4 backdrop-blur">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-lg border border-white/30 bg-white/20 px-2 py-1 text-xs font-bold tracking-wide">
+                      PDF
+                    </div>
+                    <p className="font-semibold">Convocatoria oficial</p>
+                  </div>
+
+                  <p className="text-sm opacity-85">
+                    Consulta los lineamientos, fechas y requisitos del evento.
+                  </p>
+
+                  <div className="mt-1 flex justify-center">
+                    <a
+                      href="/convocatoria.pdf"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn hero-doc-btn-solid"
+                    >
+                      Abrir documento
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* BOTONES CENTRADOS */}
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
                 <a href="#inscripciones" className="btn hero-btn-primary">
                   Inscribirme
                 </a>
@@ -92,6 +120,15 @@ export default function Hero() {
           .hero-btn-outline:hover {
             background: rgba(255, 255, 255, 0.12);
             border-color: #ffffff;
+          }
+
+          .hero-doc-btn-solid {
+            background: #ffffff;
+            color: var(--congreso-primary);
+            border: 2px solid #ffffff;
+          }
+          .hero-doc-btn-solid:hover {
+            background: rgba(255,255,255,.92);
           }
 
           @media (max-width: 767px) {

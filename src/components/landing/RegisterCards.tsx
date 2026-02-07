@@ -5,19 +5,19 @@ import { ButtonLink } from "../ui/ButtonLink";
 const items = [
   {
     title: "Ponente",
-    desc: "Diligencia tus datos y adjunta los documentos requeridos.",
+    desc: "Registra hasta dos ponentes y adjunta los dos documentos requeridos en PDF (ponencia y cesión).",
     href: "/inscripcion/ponente",
     Icon: Mic2,
   },
   {
     title: "Evaluador",
-    desc: "Diligencia tus datos y adjunta tu firma digital (PNG).",
+    desc: "Registro profesional para evaluación académica. Si eres docente, podrás indicar tu información de docencia.",
     href: "/inscripcion/evaluador",
     Icon: ClipboardCheck,
   },
   {
     title: "Asistente",
-    desc: "Diligencia tus datos para confirmar tu participación.",
+    desc: "Inscripción general. Si eres estudiante o docente podrás agregar tus datos académicos (opcional).",
     href: "/inscripcion/asistente",
     Icon: Users,
   },
@@ -29,7 +29,7 @@ export default function RegisterCards() {
       <div className="mb-4 text-center">
         <h2 className="text-2xl font-bold tracking-tight">Inscripciones</h2>
         <p className="mx-auto mt-1 max-w-2xl text-sm opacity-80">
-          Selecciona la modalidad de participación y completa el formulario correspondiente.
+          Selecciona tu modalidad de participación y completa el formulario.
         </p>
       </div>
 
@@ -38,9 +38,9 @@ export default function RegisterCards() {
           <Card key={title} className="flex flex-col gap-4">
             <div className="flex items-start gap-3">
               <div
-                className="rounded-xl p-3"
+                className="rounded-2xl border border-black/10 p-3"
                 style={{
-                  background: "rgba(31,114,123,.12)",
+                  background: "rgba(31,114,123,.10)",
                   color: "var(--congreso-secondary)",
                 }}
               >

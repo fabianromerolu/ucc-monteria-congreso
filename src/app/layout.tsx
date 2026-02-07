@@ -1,10 +1,10 @@
-//src/app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import { Toaster } from "react-hot-toast";
 import Footer from "../components/landing/Footer";
+import WhatsAppFloating from "../components/ui/WhatsAppFloating";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,6 +32,7 @@ export default function RootLayout({
           <Footer />
         </div>
 
+        <WhatsAppFloating />
         <Toaster position="top-right" />
       </body>
     </html>

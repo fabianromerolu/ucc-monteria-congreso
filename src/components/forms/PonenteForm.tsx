@@ -3,7 +3,7 @@
 import * as React from "react";
 import toast from "react-hot-toast";
 
-import { Field, SelectField, Textarea, FileField, SubmitButton } from "./_fields";
+import { Field, SelectField, Textarea, FileField, SubmitButton, Divider, Toggle } from "./_fields";
 import type { LineaTematica, PonenteRegistration, TipoDocumento } from "@/src/types/registrations";
 import { registerPonente } from "@/src/services/registration.service";
 
@@ -12,10 +12,11 @@ const LS_KEY = "congreso:ponente:draft";
 type PonenteDraft = PonenteRegistration & {
   ponenciaPdfName?: string;
   cesionPdfName?: string;
+  usePonente2?: boolean;
+  useAcademico?: boolean;
 };
 
 const initial: PonenteRegistration = {
-  // Ponente 1
   nombres: "",
   apellidos: "",
   tipoDocumento: "CC",
@@ -23,7 +24,6 @@ const initial: PonenteRegistration = {
   email: "",
   telefono: "",
 
-  // Ponente 2 (opcional)
   nombres2: "",
   apellidos2: "",
   tipoDocumento2: "CC",
@@ -34,9 +34,7 @@ const initial: PonenteRegistration = {
   pais: "",
   ciudad: "",
 
-  institucion: "",
   universidad: "",
-
   programa: "",
   semestre: "",
 
@@ -48,14 +46,19 @@ const initial: PonenteRegistration = {
   lineaTematica: "1",
 };
 
-function isPonente2Used(f: PonenteRegistration) {
-  return Boolean(
-    (f.nombres2 && f.nombres2.trim()) ||
-      (f.apellidos2 && f.apellidos2.trim()) ||
-      (f.documento2 && f.documento2.trim()) ||
-      (f.email2 && f.email2.trim()) ||
-      (f.telefono2 && f.telefono2.trim())
-  );
+function isPonente2Complete(f: PonenteRegistration) {
+  const required2: Array<keyof PonenteRegistration> = [
+    "nombres2",
+    "apellidos2",
+    "tipoDocumento2",
+    "documento2",
+    "email2",
+    "telefono2",
+  ];
+  return required2.every((k) => {
+    const v = f[k];
+    return v !== undefined && v !== null && String(v).trim() !== "";
+  });
 }
 
 export default function PonenteForm() {
@@ -64,6 +67,9 @@ export default function PonenteForm() {
 
   const [ponenciaPdf, setPonenciaPdf] = React.useState<File | undefined>(undefined);
   const [cesionPdf, setCesionPdf] = React.useState<File | undefined>(undefined);
+
+  const [usePonente2, setUsePonente2] = React.useState(false);
+  const [useAcademico, setUseAcademico] = React.useState(false);
 
   React.useEffect(() => {
     const raw = localStorage.getItem(LS_KEY);
@@ -78,17 +84,21 @@ export default function PonenteForm() {
         tipoDocumento: (parsed.tipoDocumento ?? "CC") as TipoDocumento,
         tipoDocumento2: (parsed.tipoDocumento2 ?? "CC") as TipoDocumento,
       }));
+      setUsePonente2(Boolean(parsed.usePonente2));
+      setUseAcademico(Boolean(parsed.useAcademico));
     } catch {}
   }, []);
 
   React.useEffect(() => {
     const draft: PonenteDraft = {
       ...form,
+      usePonente2,
+      useAcademico,
       ponenciaPdfName: ponenciaPdf?.name,
       cesionPdfName: cesionPdf?.name,
     };
     localStorage.setItem(LS_KEY, JSON.stringify(draft));
-  }, [form, ponenciaPdf, cesionPdf]);
+  }, [form, ponenciaPdf, cesionPdf, usePonente2, useAcademico]);
 
   function set<K extends keyof PonenteRegistration>(key: K, value: PonenteRegistration[K]) {
     setForm((p) => ({ ...p, [key]: value }));
@@ -110,48 +120,54 @@ export default function PonenteForm() {
         return;
       }
 
-      // Si el ponente 2 se usa, exigimos que esté completo.
-      if (isPonente2Used(form)) {
-        const required2: Array<keyof PonenteRegistration> = [
-          "nombres2",
-          "apellidos2",
-          "tipoDocumento2",
-          "documento2",
-          "email2",
-          "telefono2",
-        ];
-        const missing = required2.filter((k) => {
-          const v = form[k];
-          return v === undefined || v === null || String(v).trim() === "";
-        });
+      if (usePonente2 && !isPonente2Complete(form)) {
+        toast.error("Si activas Ponente 2, completa todos sus campos.");
+        setLoading(false);
+        return;
+      }
 
-        if (missing.length) {
-          toast.error("Si agregas Ponente 2, completa todos sus campos.");
+      if (useAcademico) {
+        if (!form.universidad?.trim() || !form.programa?.trim()) {
+          toast.error("Si activas datos académicos, indica universidad y programa.");
           setLoading(false);
           return;
         }
+        // semestre lo dejo opcional igual, pero si quieres exigirlo, lo ponemos required
       }
 
-      await registerPonente(
-        {
-          ...form,
-          // limpia strings vacíos opcionales para que no “ensucien”
-          nombres2: form.nombres2?.trim() ? form.nombres2 : undefined,
-          apellidos2: form.apellidos2?.trim() ? form.apellidos2 : undefined,
-          documento2: form.documento2?.trim() ? form.documento2 : undefined,
-          email2: form.email2?.trim() ? form.email2 : undefined,
-          telefono2: form.telefono2?.trim() ? form.telefono2 : undefined,
-          grupoInvestigacion: form.grupoInvestigacion?.trim() ? form.grupoInvestigacion : undefined,
-          semillero: form.semillero?.trim() ? form.semillero : undefined,
-        },
-        { archivoPonenciaPdf: ponenciaPdf, cesionDerechosPdf: cesionPdf }
-      );
+      const payload: PonenteRegistration = {
+        ...form,
+
+        // Ponente 2
+        nombres2: usePonente2 && form.nombres2?.trim() ? form.nombres2 : undefined,
+        apellidos2: usePonente2 && form.apellidos2?.trim() ? form.apellidos2 : undefined,
+        tipoDocumento2: usePonente2 ? form.tipoDocumento2 : undefined,
+        documento2: usePonente2 && form.documento2?.trim() ? form.documento2 : undefined,
+        email2: usePonente2 && form.email2?.trim() ? form.email2 : undefined,
+        telefono2: usePonente2 && form.telefono2?.trim() ? form.telefono2 : undefined,
+
+        // Académico
+        universidad: useAcademico && form.universidad?.trim() ? form.universidad : undefined,
+        programa: useAcademico && form.programa?.trim() ? form.programa : undefined,
+        semestre: useAcademico && form.semestre?.trim() ? form.semestre : undefined,
+
+        // Opcionales
+        grupoInvestigacion: form.grupoInvestigacion?.trim() ? form.grupoInvestigacion : undefined,
+        semillero: form.semillero?.trim() ? form.semillero : undefined,
+      };
+
+      await registerPonente(payload, {
+        archivoPonenciaPdf: ponenciaPdf,
+        cesionDerechosPdf: cesionPdf,
+      });
 
       toast.success("Registro enviado.");
       localStorage.removeItem(LS_KEY);
       setForm(initial);
       setPonenciaPdf(undefined);
       setCesionPdf(undefined);
+      setUsePonente2(false);
+      setUseAcademico(false);
     } catch {
       toast.error("No se pudo enviar. El borrador queda guardado.");
     } finally {
@@ -178,39 +194,36 @@ export default function PonenteForm() {
         <span className="text-xs opacity-75">Campos marcados con * son obligatorios.</span>
       </div>
 
-      <div className="form-note text-sm">
-        <p className="font-semibold">Documentos para ponentes</p>
-        <p className="mt-1 opacity-80">Descarga los formatos en Word, diligéncialos y súbelos en PDF.</p>
+      <Divider
+        title="Documentos para ponentes"
+        desc="Descarga los formatos, diligéncialos y súbelos en PDF. Los dos PDFs son obligatorios."
+      />
 
-        <div className="mt-3 grid gap-2">
-          <a
-            href="/formatos_forms/form-ponente.doc"
-            download
-            className="inline-block underline"
-            style={{ color: "var(--congreso-primary)" }}
-          >
-            Descargar formato de ponencia (Word)
-          </a>
-          <a
-            href="/formatos_forms/form-cesion_derechos.docx"
-            download
-            className="inline-block underline"
-            style={{ color: "var(--congreso-primary)" }}
-          >
-            Descargar cesión de derechos (Word)
-          </a>
-        </div>
-
-        <div className="mt-3 text-xs opacity-75">
-          {ponenciaPdf?.name ? <div>Ponencia PDF cargada: {ponenciaPdf.name}</div> : null}
-          {cesionPdf?.name ? <div>Cesión PDF cargada: {cesionPdf.name}</div> : null}
-        </div>
+      <div className="grid gap-2 text-sm">
+        <a
+          href="/formatos_forms/form-ponente.doc"
+          download
+          className="inline-block underline"
+          style={{ color: "var(--congreso-primary)" }}
+        >
+          Descargar formato de ponencia (Word)
+        </a>
+        <a
+          href="/formatos_forms/form-cesion_derechos.docx"
+          download
+          className="inline-block underline"
+          style={{ color: "var(--congreso-primary)" }}
+        >
+          Descargar cesión de derechos (Word)
+        </a>
       </div>
 
-      <div className="form-note text-sm">
-        <p className="font-semibold">Ponente 1 (obligatorio)</p>
-        <p className="mt-1 opacity-80">Información principal del ponente.</p>
+      <div className="text-xs opacity-75">
+        {ponenciaPdf?.name ? <div>Ponencia PDF cargada: {ponenciaPdf.name}</div> : null}
+        {cesionPdf?.name ? <div>Cesión PDF cargada: {cesionPdf.name}</div> : null}
       </div>
+
+      <Divider title="Ponente 1" desc="Información principal del ponente." />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Nombres" value={form.nombres} onChange={(v) => set("nombres", v)} required />
@@ -238,63 +251,85 @@ export default function PonenteForm() {
         <Field label="Teléfono" value={form.telefono} onChange={(v) => set("telefono", v)} required />
       </div>
 
-      <div className="form-note text-sm">
-        <p className="font-semibold">Ponente 2 (opcional)</p>
-        <p className="mt-1 opacity-80">Si lo agregas, completa todos los campos.</p>
-      </div>
+      <Toggle label="Agregar Ponente 2 (opcional)" checked={usePonente2} onChange={setUsePonente2} />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Nombres (Ponente 2)" value={form.nombres2 ?? ""} onChange={(v) => set("nombres2", v)} />
-        <Field label="Apellidos (Ponente 2)" value={form.apellidos2 ?? ""} onChange={(v) => set("apellidos2", v)} />
-      </div>
+      {usePonente2 ? (
+        <>
+          <Divider title="Ponente 2" desc="Si lo activas, completa todos los campos." />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <SelectField
-          label="Tipo de documento (Ponente 2)"
-          value={(form.tipoDocumento2 ?? "CC") as TipoDocumento}
-          onChange={(v) => set("tipoDocumento2", v)}
-          options={[
-            { value: "CC", label: "CC" },
-            { value: "TI", label: "TI" },
-            { value: "CE", label: "CE" },
-            { value: "PAS", label: "Pasaporte" },
-          ]}
-        />
-        <Field label="Documento (Ponente 2)" value={form.documento2 ?? ""} onChange={(v) => set("documento2", v)} />
-      </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Nombres (Ponente 2)" value={form.nombres2 ?? ""} onChange={(v) => set("nombres2", v)} required />
+            <Field label="Apellidos (Ponente 2)" value={form.apellidos2 ?? ""} onChange={(v) => set("apellidos2", v)} required />
+          </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Correo (Ponente 2)" type="email" value={form.email2 ?? ""} onChange={(v) => set("email2", v)} />
-        <Field label="Teléfono (Ponente 2)" value={form.telefono2 ?? ""} onChange={(v) => set("telefono2", v)} />
-      </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <SelectField
+              label="Tipo de documento (Ponente 2)"
+              value={(form.tipoDocumento2 ?? "CC") as TipoDocumento}
+              onChange={(v) => set("tipoDocumento2", v)}
+              required
+              options={[
+                { value: "CC", label: "CC" },
+                { value: "TI", label: "TI" },
+                { value: "CE", label: "CE" },
+                { value: "PAS", label: "Pasaporte" },
+              ]}
+            />
+            <Field label="Documento (Ponente 2)" value={form.documento2 ?? ""} onChange={(v) => set("documento2", v)} required />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Correo (Ponente 2)" type="email" value={form.email2 ?? ""} onChange={(v) => set("email2", v)} required />
+            <Field label="Teléfono (Ponente 2)" value={form.telefono2 ?? ""} onChange={(v) => set("telefono2", v)} required />
+          </div>
+        </>
+      ) : null}
+
+      <Divider title="Ubicación" />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="País" value={form.pais} onChange={(v) => set("pais", v)} required />
         <Field label="Ciudad" value={form.ciudad} onChange={(v) => set("ciudad", v)} required />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Filiación institucional" value={form.institucion} onChange={(v) => set("institucion", v)} required />
-        <Field label="Universidad" value={form.universidad} onChange={(v) => set("universidad", v)} required />
-      </div>
+      <Toggle label="Agregar información académica (opcional)" checked={useAcademico} onChange={setUseAcademico} />
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Programa / Carrera" value={form.programa} onChange={(v) => set("programa", v)} required />
-        <Field label="Semestre" value={form.semestre} onChange={(v) => set("semestre", v)} required />
+        <Field
+          label="Universidad"
+          value={form.universidad ?? ""}
+          onChange={(v) => set("universidad", v)}
+          required={useAcademico}
+          disabled={!useAcademico}
+        />
+        <Field
+          label="Programa / Carrera"
+          value={form.programa ?? ""}
+          onChange={(v) => set("programa", v)}
+          required={useAcademico}
+          disabled={!useAcademico}
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Field
-          label="Grupo de investigación (opcional)"
-          value={form.grupoInvestigacion ?? ""}
-          onChange={(v) => set("grupoInvestigacion", v)}
+          label="Semestre (opcional)"
+          value={form.semestre ?? ""}
+          onChange={(v) => set("semestre", v)}
+          disabled={!useAcademico}
+          placeholder={useAcademico ? "Ej: 6" : "Activa datos académicos"}
         />
-        <Field
-          label="Semillero (opcional)"
-          value={form.semillero ?? ""}
-          onChange={(v) => set("semillero", v)}
-        />
+        <div />
       </div>
+
+      <Divider title="Investigación (opcional)" />
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Field label="Grupo de investigación" value={form.grupoInvestigacion ?? ""} onChange={(v) => set("grupoInvestigacion", v)} />
+        <Field label="Semillero" value={form.semillero ?? ""} onChange={(v) => set("semillero", v)} />
+      </div>
+
+      <Divider title="Ponencia" />
 
       <div className="grid gap-4 md:grid-cols-2">
         <SelectField
@@ -322,21 +357,8 @@ export default function PonenteForm() {
         required
       />
 
-      <FileField
-        label="Ponencia (PDF)"
-        accept="application/pdf"
-        required
-        onChange={(f) => setPonenciaPdf(f)}
-        helper="Sube la ponencia en PDF."
-      />
-
-      <FileField
-        label="Cesión de derechos (PDF)"
-        accept="application/pdf"
-        required
-        onChange={(f) => setCesionPdf(f)}
-        helper="Sube la cesión de derechos firmada en PDF."
-      />
+      <FileField label="Ponencia (PDF)" accept="application/pdf" required onChange={(f) => setPonenciaPdf(f)} helper="Sube la ponencia en PDF." />
+      <FileField label="Cesión de derechos (PDF)" accept="application/pdf" required onChange={(f) => setCesionPdf(f)} helper="Sube la cesión de derechos firmada en PDF." />
 
       <div className="pt-1">
         <SubmitButton loading={loading}>Enviar registro</SubmitButton>

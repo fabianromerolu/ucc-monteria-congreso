@@ -3,8 +3,8 @@
 import * as React from "react";
 import toast from "react-hot-toast";
 
-import { Field, SelectField, SubmitButton } from "./_fields";
-import type { AsistenteRegistration, TipoDocumento } from "@/src/types/registrations";
+import { Field, SelectField, SubmitButton, Divider } from "./_fields";
+import type { AsistenteRegistration, RolAsistente, TipoDocumento } from "@/src/types/registrations";
 import { registerAsistente } from "@/src/services/registration.service";
 
 const LS_KEY = "congreso:asistente:draft";
@@ -18,7 +18,7 @@ const initial: AsistenteRegistration = {
   telefono: "",
   pais: "",
   ciudad: "",
-  institucion: "",
+  rol: "publico",
   universidad: "",
   programa: "",
   semestre: "",
@@ -37,6 +37,7 @@ export default function AsistenteForm() {
         ...initial,
         ...parsed,
         tipoDocumento: (parsed.tipoDocumento ?? "CC") as TipoDocumento,
+        rol: (parsed.rol ?? "publico") as RolAsistente,
       });
     } catch {}
   }, []);
@@ -49,12 +50,36 @@ export default function AsistenteForm() {
     setForm((p) => ({ ...p, [key]: value }));
   }
 
+  const showAcademico = form.rol === "estudiante" || form.rol === "docente";
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
 
     try {
-      await registerAsistente(form);
+      if (showAcademico) {
+        if (!form.universidad?.trim() || !form.programa?.trim()) {
+          toast.error("Si eres estudiante/docente, indica universidad y programa.");
+          setLoading(false);
+          return;
+        }
+        // semestre solo si es estudiante
+        if (form.rol === "estudiante" && !form.semestre?.trim()) {
+          toast.error("Si eres estudiante, indica el semestre.");
+          setLoading(false);
+          return;
+        }
+      }
+
+      const payload: AsistenteRegistration = {
+        ...form,
+        universidad: showAcademico ? form.universidad : undefined,
+        programa: showAcademico ? form.programa : undefined,
+        semestre: form.rol === "estudiante" ? form.semestre : undefined,
+      };
+
+      await registerAsistente(payload);
+
       toast.success("Inscripción enviada.");
       localStorage.removeItem(LS_KEY);
       setForm(initial);
@@ -83,6 +108,11 @@ export default function AsistenteForm() {
 
         <span className="text-xs opacity-75">Campos marcados con * son obligatorios.</span>
       </div>
+
+      <Divider
+        title="Inscripción de asistente"
+        desc="Si eres público general, solo te pedimos lo necesario. Si eres estudiante o docente, agrega tu información académica."
+      />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Nombres" value={form.nombres} onChange={(v) => set("nombres", v)} required />
@@ -115,14 +145,47 @@ export default function AsistenteForm() {
         <Field label="Ciudad" value={form.ciudad} onChange={(v) => set("ciudad", v)} required />
       </div>
 
+      <SelectField
+        label="¿Cómo participas?"
+        value={form.rol}
+        onChange={(v) => set("rol", v)}
+        required
+        options={[
+          { value: "publico", label: "Público general" },
+          { value: "estudiante", label: "Estudiante" },
+          { value: "docente", label: "Docente" },
+        ]}
+      />
+
+      <Divider title="Información académica (opcional)" desc="Se habilita si seleccionas Estudiante o Docente." />
+
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Filiación institucional" value={form.institucion} onChange={(v) => set("institucion", v)} required />
-        <Field label="Universidad" value={form.universidad} onChange={(v) => set("universidad", v)} required />
+        <Field
+          label="Universidad"
+          value={form.universidad ?? ""}
+          onChange={(v) => set("universidad", v)}
+          required={showAcademico}
+          disabled={!showAcademico}
+        />
+        <Field
+          label="Programa / Carrera"
+          value={form.programa ?? ""}
+          onChange={(v) => set("programa", v)}
+          required={showAcademico}
+          disabled={!showAcademico}
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Programa / Carrera" value={form.programa} onChange={(v) => set("programa", v)} required />
-        <Field label="Semestre" value={form.semestre} onChange={(v) => set("semestre", v)} required />
+        <Field
+          label="Semestre"
+          value={form.semestre ?? ""}
+          onChange={(v) => set("semestre", v)}
+          required={form.rol === "estudiante"}
+          disabled={form.rol !== "estudiante"}
+          placeholder={form.rol === "estudiante" ? "Ej: 6" : "Solo si eres estudiante"}
+        />
+        <div />
       </div>
 
       <div className="pt-1">
