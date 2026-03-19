@@ -1,3 +1,7 @@
+import Link from "next/link";
+
+const EVENTO_HREF = "/evento";
+
 export default function Hero() {
   return (
     <div className="relative overflow-visible">
@@ -6,7 +10,6 @@ export default function Hero() {
         style={{ borderColor: "var(--congreso-border)" }}
       >
         <div className="grid md:grid-cols-2">
-          {/* PANEL IZQUIERDO — IMAGEN */}
           <div
             className="
               relative flex items-center justify-center
@@ -31,7 +34,6 @@ export default function Hero() {
             />
           </div>
 
-          {/* PANEL DERECHO — MORADO */}
           <div
             className="
               relative flex items-center justify-center
@@ -55,12 +57,12 @@ export default function Hero() {
               </p>
 
               <p className="mt-4 md:text-lg opacity-85">
-                Espacio académico para la socialización de proyectos de investigación desarrollados por docentes
-                investigadores, semilleros, estudiantes de pregrado y posgrado, jóvenes investigadores y demás
-                actores vinculados al Nodo Región Caribe.
+                Espacio académico para la socialización de proyectos de
+                investigación desarrollados por docentes investigadores,
+                semilleros, estudiantes de pregrado y posgrado, jóvenes
+                investigadores y demás actores vinculados al Nodo Región Caribe.
               </p>
 
-              {/* 📄 CARD CONVOCATORIA (SIN PREVIEW) */}
               <div className="mt-6 mx-auto w-full max-w-[520px] rounded-2xl border border-white/25 bg-white/10 p-4 backdrop-blur">
                 <div className="flex flex-col items-center gap-3">
                   <div className="flex items-center gap-2">
@@ -87,14 +89,23 @@ export default function Hero() {
                 </div>
               </div>
 
-              {/* BOTONES CENTRADOS */}
-              <div className="mt-6 flex flex-wrap justify-center gap-3">
-                <a href="#inscripciones" className="btn hero-btn-primary">
-                  Inscribirme
-                </a>
-                <a href="#cronograma" className="btn hero-btn-outline">
-                  Ver cronograma
-                </a>
+              <div className="mt-6 mx-auto w-full max-w-[520px] rounded-2xl border border-white/25 bg-white/10 p-4 backdrop-blur">
+                <h2 className="text-xl font-bold">Inscripciones cerradas</h2>
+                <p className="mt-2 text-sm opacity-90">
+                  El proceso de inscripción ha finalizado. Para consultar el
+                  evento, revisar el listado de admitidos y ver ponentes,
+                  evaluadores y asistentes registrados, da clic en el botón
+                  correspondiente.
+                </p>
+
+                <div className="mt-4 flex flex-wrap justify-center gap-3">
+                  <Link href={EVENTO_HREF} className="btn hero-btn-primary">
+                    Consultar evento
+                  </Link>
+                  <Link href="#cronograma" className="btn hero-btn-outline">
+                    Ver cronograma
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

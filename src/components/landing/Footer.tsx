@@ -1,3 +1,4 @@
+//src/components/landing/Footer.tsx
 "use client";
 
 import Image from "next/image";

@@ -1,3 +1,4 @@
+//src/components/landing/Schedule.tsx
 export default function Schedule() {
   return (
     <section id="cronograma" className="mt-10">
