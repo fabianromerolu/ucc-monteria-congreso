@@ -97,15 +97,6 @@ export default function Hero() {
                   evaluadores y asistentes registrados, da clic en el botón
                   correspondiente.
                 </p>
-
-                <div className="mt-4 flex flex-wrap justify-center gap-3">
-                  <Link href={EVENTO_HREF} className="btn hero-btn-primary">
-                    Consultar evento
-                  </Link>
-                  <Link href="#cronograma" className="btn hero-btn-outline">
-                    Ver cronograma
-                  </Link>
-                </div>
               </div>
             </div>
           </div>
