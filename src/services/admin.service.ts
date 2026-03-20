@@ -7,7 +7,7 @@ export async function getAdminRegistros(): Promise<AdminRegistrosResponse> {
     throw new Error("NEXT_PUBLIC_BACKEND_URL no está definida.");
   }
 
-  const res = await fetch(`${BACKEND_URL}/administracion/registros`, {
+  const res = await fetch(`${BACKEND_URL}administracion/registros`, {
     method: "GET",
     cache: "no-store",
   });
