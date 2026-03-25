@@ -2,20 +2,21 @@
 
 import * as React from "react";
 import toast from "react-hot-toast";
+import type ExcelJS from "exceljs";
+
+import EvaluadoresPanelModal from "./EvaluadoresPanelModal";
+import { getAdminRegistros } from "@/src/services/admin.service";
+
 import type {
   AdminRegistrosResponse,
   AsistenteAdmin,
   EvaluadorAdmin,
   PonenteAdmin,
 } from "@/src/types/admin";
-import { getAdminRegistros } from "@/src/services/admin.service";
-import type ExcelJS from "exceljs";
 
 type ExcelRowValue = string | number | boolean | null | undefined;
 type ExcelRowData = Record<string, ExcelRowValue>;
-
 type DuplicateMap = Map<string, number>;
-
 type TabKey = "ponentes" | "evaluadores" | "asistentes";
 
 const LINEAS_TEMATICAS: Record<string, string> = {
@@ -26,6 +27,11 @@ const LINEAS_TEMATICAS: Record<string, string> = {
   "5": "Derechos humanos · Género · Cultura de paz · Medio ambiente",
   "6": "Derecho y sociedad · Emprendimiento y empresa",
 };
+
+const EVALUADORES_PANEL_CODE =
+  process.env.NEXT_PUBLIC_EVALUADORES_PANEL_CODE ?? "";
+
+const LOCAL_STORAGE_PANEL_KEY = "congreso:evaluadores-panel-authorized";
 
 function getLineaTematicaLabel(value?: string | null) {
   if (!value) return "-";
@@ -50,10 +56,13 @@ function normalizeText(value: unknown) {
 
 function objectMatchesSearch(value: unknown, term: string): boolean {
   if (!term) return true;
-
   if (value === null || value === undefined) return false;
 
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
     return normalizeText(value).includes(term);
   }
 
@@ -61,11 +70,12 @@ function objectMatchesSearch(value: unknown, term: string): boolean {
     return value.some((item) => objectMatchesSearch(item, term));
   }
 
-    if (typeof value === "object") {
+  if (typeof value === "object") {
     return Object.values(value as Record<string, unknown>).some((item) =>
-        objectMatchesSearch(item, term),
+      objectMatchesSearch(item, term),
     );
-    }
+  }
+
   return false;
 }
 
@@ -105,42 +115,41 @@ function buildCountMap(values: string[]): DuplicateMap {
   return map;
 }
 
-function isDuplicate(map: Map<string, number>, value: string) {
+function isDuplicate(map: DuplicateMap, value: string) {
   if (!value) return false;
   return (map.get(value) ?? 0) > 1;
 }
 
-function buildPonentesSheetRows(ponentes: PonenteAdmin[]) {
+function buildPonentesSheetRows(
+  ponentes: PonenteAdmin[],
+  includeEvaluadores: boolean,
+) {
   return ponentes.map((p, index) => {
     const programacion = p.programaciones?.[0];
 
-    return {
+    const base: ExcelRowData = {
       "#": index + 1,
       "TITULO PONENCIA": p.tituloPonencia,
       "LINEA TEMATICA": getLineaTematicaLabel(p.lineaTematica),
-      "RESUMEN": p.resumen,
-      "VERIFICADO": p.verificado ? "SI" : "NO",
-      "AGENDADO": p.agendado ? "SI" : "NO",
+      RESUMEN: p.resumen,
+      VERIFICADO: p.verificado ? "SI" : "NO",
+      AGENDADO: p.agendado ? "SI" : "NO",
       "FECHA PROGRAMACION": programacion ? formatDate(programacion.fecha) : "",
       "HORA INICIO": programacion?.inicio ?? "",
       "HORA FIN": programacion?.fin ?? "",
-      "SALON": programacion?.salon?.nombre ?? "",
-      "EVALUADORES ASIGNADOS": getEvaluadoresLabel(p),
-
+      SALON: programacion?.salon?.nombre ?? "",
       "PONENTE 1 NOMBRES": p.nombres,
       "PONENTE 1 APELLIDOS": p.apellidos,
       "PONENTE 1 TIPO DOCUMENTO": p.tipoDocumento,
       "PONENTE 1 DOCUMENTO": p.documento,
       "PONENTE 1 EMAIL": p.email,
       "PONENTE 1 TELEFONO": p.telefono,
-
       "PONENTE 2 NOMBRES": p.nombres2 ?? "",
       "PONENTE 2 APELLIDOS": p.apellidos2 ?? "",
       "PONENTE 2 TIPO DOCUMENTO": p.tipoDocumento2 ?? "",
       "PONENTE 2 DOCUMENTO": p.documento2 ?? "",
       "PONENTE 2 EMAIL": p.email2 ?? "",
       "PONENTE 2 TELEFONO": p.telefono2 ?? "",
-
       PAIS: p.pais,
       CIUDAD: p.ciudad,
       UNIVERSIDAD: p.universidad ?? "",
@@ -152,6 +161,15 @@ function buildPonentesSheetRows(ponentes: PonenteAdmin[]) {
       "URL CESION PDF": p.cesionDerechosPdfUrl,
       "FECHA REGISTRO": formatDate(p.createdAt),
     };
+
+    if (includeEvaluadores) {
+      return {
+        ...base,
+        "EVALUADORES ASIGNADOS": getEvaluadoresLabel(p),
+      };
+    }
+
+    return base;
   });
 }
 
@@ -195,6 +213,16 @@ function buildAsistentesSheetRows(asistentes: AsistenteAdmin[]) {
     SEMESTRE: a.semestre ?? "",
     "FECHA REGISTRO": formatDate(a.createdAt),
   }));
+}
+
+function buildEvaluadoresLockedSheetRows() {
+  return [
+    {
+      ESTADO: "PROTEGIDO",
+      MENSAJE:
+        "Debes ingresar el código del panel para exportar la hoja de evaluadores y la columna de evaluadores asignados.",
+    },
+  ];
 }
 
 function triggerDownload(buffer: ArrayBuffer, filename: string) {
@@ -281,16 +309,21 @@ function styleWorksheet(
   }
 }
 
-async function exportExcel(data: AdminRegistrosResponse) {
-  const ExcelJS = await import("exceljs");
+async function exportExcel(
+  data: AdminRegistrosResponse,
+  includeEvaluadores: boolean,
+) {
+  const ExcelJSImport = await import("exceljs");
+  const workbook = new ExcelJSImport.Workbook();
 
-  const workbook = new ExcelJS.Workbook();
   workbook.creator = "ChatGPT";
   workbook.created = new Date();
   workbook.modified = new Date();
 
-  const ponentesRows = buildPonentesSheetRows(data.ponentes);
-  const evaluadoresRows = buildEvaluadoresSheetRows(data.evaluadores);
+  const ponentesRows = buildPonentesSheetRows(data.ponentes, includeEvaluadores);
+  const evaluadoresRows = includeEvaluadores
+    ? buildEvaluadoresSheetRows(data.evaluadores)
+    : buildEvaluadoresLockedSheetRows();
   const asistentesRows = buildAsistentesSheetRows(data.asistentes);
 
   const ponentesSheet = workbook.addWorksheet("Ponentes");
@@ -328,15 +361,29 @@ async function exportExcel(data: AdminRegistrosResponse) {
   fillSheet(evaluadoresSheet, evaluadoresRows);
   fillSheet(asistentesSheet, asistentesRows);
 
-  const dupPonenteDoc = buildCountMap(data.ponentes.map((p) => normalizeText(p.documento)));
-  const dupPonenteName = buildCountMap(data.ponentes.map((p) => getPonenteFullName(p)));
-  const dupPonenciaTitle = buildCountMap(data.ponentes.map((p) => normalizeText(p.tituloPonencia)));
+  const dupPonenteDoc = buildCountMap(
+    data.ponentes.map((p) => normalizeText(p.documento)),
+  );
+  const dupPonenteName = buildCountMap(
+    data.ponentes.map((p) => getPonenteFullName(p)),
+  );
+  const dupPonenciaTitle = buildCountMap(
+    data.ponentes.map((p) => normalizeText(p.tituloPonencia)),
+  );
 
-  const dupEvaluadorDoc = buildCountMap(data.evaluadores.map((e) => normalizeText(e.documento)));
-  const dupEvaluadorName = buildCountMap(data.evaluadores.map((e) => getEvaluadorFullName(e)));
+  const dupEvaluadorDoc = buildCountMap(
+    data.evaluadores.map((e) => normalizeText(e.documento)),
+  );
+  const dupEvaluadorName = buildCountMap(
+    data.evaluadores.map((e) => getEvaluadorFullName(e)),
+  );
 
-  const dupAsistenteDoc = buildCountMap(data.asistentes.map((a) => normalizeText(a.documento)));
-  const dupAsistenteName = buildCountMap(data.asistentes.map((a) => getAsistenteFullName(a)));
+  const dupAsistenteDoc = buildCountMap(
+    data.asistentes.map((a) => normalizeText(a.documento)),
+  );
+  const dupAsistenteName = buildCountMap(
+    data.asistentes.map((a) => getAsistenteFullName(a)),
+  );
 
   const duplicatePonenteRows = new Set<number>();
   data.ponentes.forEach((p, index) => {
@@ -370,7 +417,11 @@ async function exportExcel(data: AdminRegistrosResponse) {
   });
 
   styleWorksheet(ponentesSheet, ponentesRows.length, duplicatePonenteRows);
-  styleWorksheet(evaluadoresSheet, evaluadoresRows.length, duplicateEvaluadorRows);
+  styleWorksheet(
+    evaluadoresSheet,
+    evaluadoresRows.length,
+    includeEvaluadores ? duplicateEvaluadorRows : new Set<number>(),
+  );
   styleWorksheet(asistentesSheet, asistentesRows.length, duplicateAsistenteRows);
 
   const buffer = await workbook.xlsx.writeBuffer();
@@ -479,14 +530,18 @@ function Tabs({
                 : "rgba(255,255,255,0.9)",
               color: active ? "#fff" : "var(--congreso-text)",
               borderColor: active ? "transparent" : "var(--congreso-border)",
-              boxShadow: active ? "0 10px 24px rgba(75, 52, 173, 0.22)" : "0 4px 14px rgba(0,0,0,0.04)",
+              boxShadow: active
+                ? "0 10px 24px rgba(75, 52, 173, 0.22)"
+                : "0 4px 14px rgba(0,0,0,0.04)",
             }}
           >
             {item.label}
             <span
               className="ml-2 rounded-full px-2 py-0.5 text-xs"
               style={{
-                background: active ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.06)",
+                background: active
+                  ? "rgba(255,255,255,0.18)"
+                  : "rgba(0,0,0,0.06)",
                 color: active ? "#fff" : "var(--congreso-text)",
               }}
             >
@@ -504,7 +559,8 @@ function LoaderCard() {
     <div
       className="rounded-3xl border p-8"
       style={{
-        background: "linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.88))",
+        background:
+          "linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.88))",
         borderColor: "var(--congreso-border)",
         boxShadow: "0 16px 40px rgba(0,0,0,0.06)",
       }}
@@ -535,7 +591,8 @@ function EmptyState({ message }: { message: string }) {
     <div
       className="rounded-3xl border p-8 text-center"
       style={{
-        background: "linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.88))",
+        background:
+          "linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.88))",
         borderColor: "var(--congreso-border)",
         boxShadow: "0 16px 40px rgba(0,0,0,0.06)",
       }}
@@ -585,7 +642,10 @@ function dangerCellStyle(active: boolean): React.CSSProperties | undefined {
   };
 }
 
-function dangerRowStyle(active: boolean, fallback: string): React.CSSProperties {
+function dangerRowStyle(
+  active: boolean,
+  fallback: string,
+): React.CSSProperties {
   if (!active) return { background: fallback };
   return { background: "rgba(217,45,32,0.06)" };
 }
@@ -610,7 +670,8 @@ function TableShell({
         className="flex items-center justify-between border-b px-5 py-4"
         style={{
           borderColor: "var(--congreso-border)",
-          background: "linear-gradient(180deg, rgba(248,249,255,0.9), rgba(255,255,255,0.9))",
+          background:
+            "linear-gradient(180deg, rgba(248,249,255,0.9), rgba(255,255,255,0.9))",
         }}
       >
         <h3 className="text-sm font-semibold" style={{ color: "var(--congreso-text)" }}>
@@ -629,11 +690,13 @@ function PonentesTable({
   duplicateDocs,
   duplicateNames,
   duplicateTitles,
+  canViewEvaluadores,
 }: {
   rows: PonenteAdmin[];
-  duplicateDocs: Map<string, number>;
-  duplicateNames: Map<string, number>;
-  duplicateTitles: Map<string, number>;
+  duplicateDocs: DuplicateMap;
+  duplicateNames: DuplicateMap;
+  duplicateTitles: DuplicateMap;
+  canViewEvaluadores: boolean;
 }) {
   return (
     <TableShell countLabel={`${rows.length} ponencias`}>
@@ -647,7 +710,9 @@ function PonentesTable({
             <th className="px-4 py-3 font-semibold">Título de la ponencia</th>
             <th className="px-4 py-3 font-semibold">Eje temático</th>
             <th className="px-4 py-3 font-semibold">Programación</th>
-            <th className="px-4 py-3 font-semibold">Evaluadores</th>
+            {canViewEvaluadores ? (
+              <th className="px-4 py-3 font-semibold">Evaluadores</th>
+            ) : null}
             <th className="px-4 py-3 font-semibold">Ponente 1</th>
             <th className="px-4 py-3 font-semibold">Tipo doc.</th>
             <th className="px-4 py-3 font-semibold">Documento</th>
@@ -670,9 +735,18 @@ function PonentesTable({
         </thead>
         <tbody>
           {rows.map((row, index) => {
-            const isDocDup = isDuplicate(duplicateDocs, normalizeText(row.documento));
-            const isNameDup = isDuplicate(duplicateNames, getPonenteFullName(row));
-            const isTitleDup = isDuplicate(duplicateTitles, normalizeText(row.tituloPonencia));
+            const isDocDup = isDuplicate(
+              duplicateDocs,
+              normalizeText(row.documento),
+            );
+            const isNameDup = isDuplicate(
+              duplicateNames,
+              getPonenteFullName(row),
+            );
+            const isTitleDup = isDuplicate(
+              duplicateTitles,
+              normalizeText(row.tituloPonencia),
+            );
             const rowHasDup = isDocDup || isNameDup || isTitleDup;
 
             return (
@@ -683,12 +757,20 @@ function PonentesTable({
                   borderColor: "var(--congreso-border)",
                   ...dangerRowStyle(
                     rowHasDup,
-                    index % 2 === 0 ? "rgba(255,255,255,0.96)" : "rgba(248,249,255,0.82)",
+                    index % 2 === 0
+                      ? "rgba(255,255,255,0.96)"
+                      : "rgba(248,249,255,0.82)",
                   ),
                 }}
               >
                 <td className="px-4 py-3 font-semibold">{index + 1}</td>
-                <td className="px-4 py-3 font-semibold" style={{ ...dangerCellStyle(isTitleDup), color: isTitleDup ? "#B42318" : "var(--congreso-primary)" }}>
+                <td
+                  className="px-4 py-3 font-semibold"
+                  style={{
+                    ...dangerCellStyle(isTitleDup),
+                    color: isTitleDup ? "#B42318" : "var(--congreso-primary)",
+                  }}
+                >
                   {row.tituloPonencia}
                   {isTitleDup ? <DuplicateBadge /> : null}
                 </td>
@@ -696,7 +778,9 @@ function PonentesTable({
                   <Chip>{getLineaTematicaLabel(row.lineaTematica)}</Chip>
                 </td>
                 <td className="px-4 py-3">{getProgramacionLabel(row)}</td>
-                <td className="px-4 py-3">{getEvaluadoresLabel(row)}</td>
+                {canViewEvaluadores ? (
+                  <td className="px-4 py-3">{getEvaluadoresLabel(row)}</td>
+                ) : null}
                 <td className="px-4 py-3" style={dangerCellStyle(isNameDup)}>
                   {`${row.nombres} ${row.apellidos}`}
                   {isNameDup ? <DuplicateBadge /> : null}
@@ -716,7 +800,9 @@ function PonentesTable({
                 <td className="px-4 py-3">{row.grupoInvestigacion ?? "-"}</td>
                 <td className="px-4 py-3">{row.semillero ?? "-"}</td>
                 <td className="px-4 py-3">
-                  {row.nombres2 || row.apellidos2 ? `${row.nombres2 ?? ""} ${row.apellidos2 ?? ""}`.trim() : "-"}
+                  {row.nombres2 || row.apellidos2
+                    ? `${row.nombres2 ?? ""} ${row.apellidos2 ?? ""}`.trim()
+                    : "-"}
                 </td>
                 <td className="px-4 py-3">{row.documento2 ?? "-"}</td>
                 <td className="px-4 py-3">{row.email2 ?? "-"}</td>
@@ -758,8 +844,8 @@ function EvaluadoresTable({
   duplicateNames,
 }: {
   rows: EvaluadorAdmin[];
-  duplicateDocs: Map<string, number>;
-  duplicateNames: Map<string, number>;
+  duplicateDocs: DuplicateMap;
+  duplicateNames: DuplicateMap;
 }) {
   return (
     <TableShell countLabel={`${rows.length} evaluadores`}>
@@ -790,8 +876,14 @@ function EvaluadoresTable({
         </thead>
         <tbody>
           {rows.map((row, index) => {
-            const isDocDup = isDuplicate(duplicateDocs, normalizeText(row.documento));
-            const isNameDup = isDuplicate(duplicateNames, getEvaluadorFullName(row));
+            const isDocDup = isDuplicate(
+              duplicateDocs,
+              normalizeText(row.documento),
+            );
+            const isNameDup = isDuplicate(
+              duplicateNames,
+              getEvaluadorFullName(row),
+            );
             const rowHasDup = isDocDup || isNameDup;
 
             return (
@@ -802,7 +894,9 @@ function EvaluadoresTable({
                   borderColor: "var(--congreso-border)",
                   ...dangerRowStyle(
                     rowHasDup,
-                    index % 2 === 0 ? "rgba(255,255,255,0.96)" : "rgba(248,249,255,0.82)",
+                    index % 2 === 0
+                      ? "rgba(255,255,255,0.96)"
+                      : "rgba(248,249,255,0.82)",
                   ),
                 }}
               >
@@ -811,7 +905,9 @@ function EvaluadoresTable({
                   {row.nombres}
                   {isNameDup ? <DuplicateBadge /> : null}
                 </td>
-                <td className="px-4 py-3" style={dangerCellStyle(isNameDup)}>{row.apellidos}</td>
+                <td className="px-4 py-3" style={dangerCellStyle(isNameDup)}>
+                  {row.apellidos}
+                </td>
                 <td className="px-4 py-3">{row.tipoDocumento}</td>
                 <td className="px-4 py-3" style={dangerCellStyle(isDocDup)}>
                   {row.documento}
@@ -846,8 +942,8 @@ function AsistentesTable({
   duplicateNames,
 }: {
   rows: AsistenteAdmin[];
-  duplicateDocs: Map<string, number>;
-  duplicateNames: Map<string, number>;
+  duplicateDocs: DuplicateMap;
+  duplicateNames: DuplicateMap;
 }) {
   return (
     <TableShell countLabel={`${rows.length} asistentes`}>
@@ -874,8 +970,14 @@ function AsistentesTable({
         </thead>
         <tbody>
           {rows.map((row, index) => {
-            const isDocDup = isDuplicate(duplicateDocs, normalizeText(row.documento));
-            const isNameDup = isDuplicate(duplicateNames, getAsistenteFullName(row));
+            const isDocDup = isDuplicate(
+              duplicateDocs,
+              normalizeText(row.documento),
+            );
+            const isNameDup = isDuplicate(
+              duplicateNames,
+              getAsistenteFullName(row),
+            );
             const rowHasDup = isDocDup || isNameDup;
 
             return (
@@ -886,7 +988,9 @@ function AsistentesTable({
                   borderColor: "var(--congreso-border)",
                   ...dangerRowStyle(
                     rowHasDup,
-                    index % 2 === 0 ? "rgba(255,255,255,0.96)" : "rgba(248,249,255,0.82)",
+                    index % 2 === 0
+                      ? "rgba(255,255,255,0.96)"
+                      : "rgba(248,249,255,0.82)",
                   ),
                 }}
               >
@@ -895,7 +999,9 @@ function AsistentesTable({
                   {row.nombres}
                   {isNameDup ? <DuplicateBadge /> : null}
                 </td>
-                <td className="px-4 py-3" style={dangerCellStyle(isNameDup)}>{row.apellidos}</td>
+                <td className="px-4 py-3" style={dangerCellStyle(isNameDup)}>
+                  {row.apellidos}
+                </td>
                 <td className="px-4 py-3">{row.tipoDocumento}</td>
                 <td className="px-4 py-3" style={dangerCellStyle(isDocDup)}>
                   {row.documento}
@@ -926,6 +1032,13 @@ export default function RegistrationsViewer() {
   const [lineaFilter, setLineaFilter] = React.useState("");
   const [data, setData] = React.useState<AdminRegistrosResponse | null>(null);
 
+  const [panelOpen, setPanelOpen] = React.useState(false);
+  const [panelCode, setPanelCode] = React.useState("");
+  const [isAuthorized, setIsAuthorized] = React.useState(false);
+  const [validatingCode, setValidatingCode] = React.useState(false);
+
+  const canViewEvaluadores = isAuthorized;
+
   React.useEffect(() => {
     let mounted = true;
 
@@ -949,13 +1062,60 @@ export default function RegistrationsViewer() {
     };
   }, []);
 
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const saved = window.localStorage.getItem(LOCAL_STORAGE_PANEL_KEY);
+    if (saved === "true") {
+      setIsAuthorized(true);
+    }
+  }, []);
+
+  function handleValidateCode() {
+    setValidatingCode(true);
+
+    try {
+      const envCode = EVALUADORES_PANEL_CODE.trim();
+      const incoming = panelCode.trim();
+
+      if (!envCode) {
+        toast.error(
+          "No se encontró NEXT_PUBLIC_EVALUADORES_PANEL_CODE en el entorno.",
+        );
+        return;
+      }
+
+      if (!incoming || incoming !== envCode) {
+        toast.error("Código incorrecto.");
+        return;
+      }
+
+      setIsAuthorized(true);
+      window.localStorage.setItem(LOCAL_STORAGE_PANEL_KEY, "true");
+      toast.success("Acceso habilitado.");
+    } finally {
+      setValidatingCode(false);
+    }
+  }
+
+  function handleLogoutPanel() {
+    setIsAuthorized(false);
+    setPanelCode("");
+    window.localStorage.removeItem(LOCAL_STORAGE_PANEL_KEY);
+    toast.success("Acceso cerrado en este navegador.");
+  }
+
   async function handleExport() {
     if (!data) return;
 
     try {
       setExporting(true);
-      await exportExcel(data);
-      toast.success("Excel generado correctamente.");
+      await exportExcel(data, canViewEvaluadores);
+      toast.success(
+        canViewEvaluadores
+          ? "Excel generado correctamente."
+          : "Excel generado sin la hoja y columna de evaluadores.",
+      );
     } catch (error) {
       console.error(error);
       toast.error("No se pudo generar el Excel.");
@@ -1014,6 +1174,7 @@ export default function RegistrationsViewer() {
           {
             ...item,
             lineaTematicaLabel: getLineaTematicaLabel(item.lineaTematica),
+            evaluadoresLabel: getEvaluadoresLabel(item),
           },
           normalizedSearch,
         ),
@@ -1074,23 +1235,38 @@ export default function RegistrationsViewer() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={!data || exporting}
-            className="inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold text-white transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
-            style={{
-              background: exporting
-                ? "linear-gradient(135deg, #7a7a7a, #5d5d5d)"
-                : "linear-gradient(135deg, #1f8f55, #12703f)",
-              boxShadow: exporting
-                ? "none"
-                : "0 14px 28px rgba(18,112,63,0.24)",
-            }}
-          >
-            <span className="mr-2">📊</span>
-            {exporting ? "Generando Excel..." : "Descargar Excel"}
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setPanelOpen(true)}
+              className="inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition-all duration-200"
+              style={{
+                background: "rgba(255,255,255,0.96)",
+                border: "1px solid var(--congreso-border)",
+                color: "var(--congreso-text)",
+              }}
+            >
+              Panel
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={!data || exporting}
+              className="inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold text-white transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
+              style={{
+                background: exporting
+                  ? "linear-gradient(135deg, #7a7a7a, #5d5d5d)"
+                  : "linear-gradient(135deg, #1f8f55, #12703f)",
+                boxShadow: exporting
+                  ? "none"
+                  : "0 14px 28px rgba(18,112,63,0.24)",
+              }}
+            >
+              <span className="mr-2">📊</span>
+              {exporting ? "Generando Excel..." : "Descargar Excel"}
+            </button>
+          </div>
         </div>
 
         <div className="mb-5 flex flex-col gap-4">
@@ -1113,6 +1289,7 @@ export default function RegistrationsViewer() {
             {activeTab === "ponentes" && lineaFilter ? (
               <Chip>Eje: {getLineaTematicaLabel(lineaFilter)}</Chip>
             ) : null}
+            {canViewEvaluadores ? <Chip>Panel habilitado</Chip> : null}
           </div>
         ) : null}
 
@@ -1127,12 +1304,15 @@ export default function RegistrationsViewer() {
               duplicateDocs={duplicatePonenteDocs}
               duplicateNames={duplicatePonenteNames}
               duplicateTitles={duplicatePonenciaTitles}
+              canViewEvaluadores={canViewEvaluadores}
             />
           ) : (
             <EmptyState message="No se encontraron ponencias con ese criterio de búsqueda o eje temático." />
           )
         ) : activeTab === "evaluadores" ? (
-          filteredEvaluadores.length ? (
+          !canViewEvaluadores ? (
+            <EmptyState message="Debes ingresar el código en el panel para visualizar los evaluadores." />
+          ) : filteredEvaluadores.length ? (
             <EvaluadoresTable
               rows={filteredEvaluadores}
               duplicateDocs={duplicateEvaluadorDocs}
@@ -1151,6 +1331,17 @@ export default function RegistrationsViewer() {
           <EmptyState message="No se encontraron asistentes con ese criterio de búsqueda." />
         )}
       </div>
+
+      <EvaluadoresPanelModal
+        open={panelOpen}
+        onClose={() => setPanelOpen(false)}
+        code={panelCode}
+        setCode={setPanelCode}
+        onValidate={handleValidateCode}
+        validating={validatingCode}
+        isAuthorized={isAuthorized}
+        onLogout={handleLogoutPanel}
+      />
     </section>
   );
 }
