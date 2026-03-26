@@ -237,7 +237,31 @@ function triggerDownload(buffer: ArrayBuffer, filename: string) {
   a.click();
   URL.revokeObjectURL(url);
 }
+async function downloadPdfFile(url: string, filename: string) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error("No se pudo descargar el PDF.");
+    }
 
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(
+      new Blob([blob], { type: "application/pdf" })
+    );
+
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (error) {
+    console.error(error);
+    toast.error("No se pudo descargar el PDF.");
+  }
+}
 function styleWorksheet(
   worksheet: ExcelJS.Worksheet,
   rowsLength: number,
@@ -807,24 +831,24 @@ function PonentesTable({
                 <td className="px-4 py-3">{row.documento2 ?? "-"}</td>
                 <td className="px-4 py-3">{row.email2 ?? "-"}</td>
                 <td className="px-4 py-3">
-                  <a
-                    href={row.ponenciaPdfUrl}
-                    download="ponencia.pdf"
+                  <button
+                    type="button"
+                    onClick={() => downloadPdfFile(row.ponenciaPdfUrl, "ponencia.pdf")}
                     className="underline"
                     style={{ color: "var(--congreso-primary)" }}
                   >
                     Descargar PDF
-                  </a>
+                  </button>
                 </td>
                 <td className="px-4 py-3">
-                  <a
-                    href={row.cesionDerechosPdfUrl}
-                    download="cesion-derechos.pdf"
+                  <button
+                    type="button"
+                    onClick={() => downloadPdfFile(row.cesionDerechosPdfUrl, "cesion-derechos.pdf")}
                     className="underline"
                     style={{ color: "var(--congreso-primary)" }}
                   >
                     Descargar PDF
-                  </a>
+                  </button>
                 </td>
                 <td className="px-4 py-3">{formatDate(row.createdAt)}</td>
               </tr>
