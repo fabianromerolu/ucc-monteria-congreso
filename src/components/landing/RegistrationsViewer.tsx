@@ -227,13 +227,13 @@ function buildEvaluadoresLockedSheetRows() {
 
 function triggerDownload(buffer: ArrayBuffer, filename: string) {
   const blob = new Blob([buffer], {
-    type: "application/pdf",
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
 
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
+  a.download = filename.endsWith(".xlsx") ? filename : `${filename}.xlsx`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -809,23 +809,21 @@ function PonentesTable({
                 <td className="px-4 py-3">
                   <a
                     href={row.ponenciaPdfUrl}
-                    target="_blank"
-                    rel="noreferrer"
+                    download="ponencia.pdf"
                     className="underline"
                     style={{ color: "var(--congreso-primary)" }}
                   >
-                    Ver PDF
+                    Descargar PDF
                   </a>
                 </td>
                 <td className="px-4 py-3">
                   <a
                     href={row.cesionDerechosPdfUrl}
-                    target="_blank"
-                    rel="noreferrer"
+                    download="cesion-derechos.pdf"
                     className="underline"
                     style={{ color: "var(--congreso-primary)" }}
                   >
-                    Ver PDF
+                    Descargar PDF
                   </a>
                 </td>
                 <td className="px-4 py-3">{formatDate(row.createdAt)}</td>
