@@ -227,13 +227,13 @@ function buildEvaluadoresLockedSheetRows() {
 
 function triggerDownload(buffer: ArrayBuffer, filename: string) {
   const blob = new Blob([buffer], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    type: "application/pdf",
   });
 
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = filename;
+  a.download = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
   a.click();
   URL.revokeObjectURL(url);
 }
