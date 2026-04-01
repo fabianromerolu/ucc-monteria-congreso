@@ -124,26 +124,6 @@ function isDuplicate(map: DuplicateMap, value: string) {
   return (map.get(value) ?? 0) > 1;
 }
 
-function getProtectedDisplayValue(
-  value: string | null | undefined,
-  isAuthorized: boolean,
-  hiddenLabel = "Protegido",
-) {
-  const normalized = String(value ?? "").trim();
-  if (!normalized) return "-";
-  return isAuthorized ? normalized : hiddenLabel;
-}
-
-function getProtectedSheetValue(
-  value: string | null | undefined,
-  isAuthorized: boolean,
-  hiddenLabel = "PROTEGIDO",
-) {
-  const normalized = String(value ?? "").trim();
-  if (!normalized) return "";
-  return isAuthorized ? normalized : hiddenLabel;
-}
-
 function buildPonentesSheetRows(
   ponentes: PonenteAdmin[],
   includeProtectedData: boolean,
@@ -151,7 +131,7 @@ function buildPonentesSheetRows(
   return ponentes.map((p, index) => {
     const programacion = p.programaciones?.[0];
 
-    const base: ExcelRowData = {
+    const publicData: ExcelRowData = {
       "#": index + 1,
       "TITULO PONENCIA": p.tituloPonencia,
       "LINEA TEMATICA": getLineaTematicaLabel(p.lineaTematica),
@@ -162,26 +142,30 @@ function buildPonentesSheetRows(
       "HORA INICIO": programacion?.inicio ?? "",
       "HORA FIN": programacion?.fin ?? "",
       SALON: programacion?.salon?.nombre ?? "",
-      "PONENTE 1 NOMBRES": getProtectedSheetValue(
-        p.nombres,
-        includeProtectedData,
-      ),
-      "PONENTE 1 APELLIDOS": getProtectedSheetValue(
-        p.apellidos,
-        includeProtectedData,
-      ),
+      "FECHA REGISTRO": formatDate(p.createdAt),
+    };
+
+    if (!includeProtectedData) return publicData;
+
+    return {
+      "#": index + 1,
+      "TITULO PONENCIA": p.tituloPonencia,
+      "LINEA TEMATICA": getLineaTematicaLabel(p.lineaTematica),
+      RESUMEN: p.resumen,
+      VERIFICADO: p.verificado ? "SI" : "NO",
+      AGENDADO: p.agendado ? "SI" : "NO",
+      "FECHA PROGRAMACION": programacion ? formatDate(programacion.fecha) : "",
+      "HORA INICIO": programacion?.inicio ?? "",
+      "HORA FIN": programacion?.fin ?? "",
+      SALON: programacion?.salon?.nombre ?? "",
+      "PONENTE 1 NOMBRES": p.nombres,
+      "PONENTE 1 APELLIDOS": p.apellidos,
       "PONENTE 1 TIPO DOCUMENTO": p.tipoDocumento,
       "PONENTE 1 DOCUMENTO": p.documento,
       "PONENTE 1 EMAIL": p.email,
       "PONENTE 1 TELEFONO": p.telefono,
-      "PONENTE 2 NOMBRES": getProtectedSheetValue(
-        p.nombres2,
-        includeProtectedData,
-      ),
-      "PONENTE 2 APELLIDOS": getProtectedSheetValue(
-        p.apellidos2,
-        includeProtectedData,
-      ),
+      "PONENTE 2 NOMBRES": p.nombres2 ?? "",
+      "PONENTE 2 APELLIDOS": p.apellidos2 ?? "",
       "PONENTE 2 TIPO DOCUMENTO": p.tipoDocumento2 ?? "",
       "PONENTE 2 DOCUMENTO": p.documento2 ?? "",
       "PONENTE 2 EMAIL": p.email2 ?? "",
@@ -195,17 +179,9 @@ function buildPonentesSheetRows(
       SEMILLERO: p.semillero ?? "",
       "URL PONENCIA PDF": p.ponenciaPdfUrl,
       "URL CESION PDF": p.cesionDerechosPdfUrl,
+      "EVALUADORES ASIGNADOS": getEvaluadoresLabel(p),
       "FECHA REGISTRO": formatDate(p.createdAt),
     };
-
-    if (includeProtectedData) {
-      return {
-        ...base,
-        "EVALUADORES ASIGNADOS": getEvaluadoresLabel(p),
-      };
-    }
-
-    return base;
   });
 }
 
@@ -256,7 +232,7 @@ function buildEvaluadoresLockedSheetRows() {
     {
       ESTADO: "PROTEGIDO",
       MENSAJE:
-        "Debes ingresar el código del panel para exportar los nombres de ponentes, la hoja de evaluadores y la columna de evaluadores asignados.",
+        "Debes ingresar el código del panel para exportar los datos completos de ponentes, la hoja de evaluadores y la columna de evaluadores asignados.",
     },
   ];
 }
@@ -494,9 +470,11 @@ async function exportExcel(
 function SearchBox({
   value,
   onChange,
+  placeholder,
 }: {
   value: string;
   onChange: (value: string) => void;
+  placeholder?: string;
 }) {
   return (
     <div
@@ -510,7 +488,10 @@ function SearchBox({
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Buscar por título, nombre, documento, universidad, correo o cualquier dato..."
+        placeholder={
+          placeholder ??
+          "Buscar por título, nombre, documento, universidad, correo o cualquier dato..."
+        }
         className="w-full bg-transparent text-sm outline-none placeholder:opacity-60"
         style={{ color: "var(--congreso-text)" }}
       />
@@ -763,7 +744,9 @@ function PonentesTable({
 }) {
   return (
     <TableShell countLabel={`${rows.length} ponencias`}>
-      <table className="min-w-[2300px] w-full text-sm">
+      <table
+        className={`${isPanelAuthorized ? "min-w-[2300px]" : "min-w-[900px]"} w-full text-sm`}
+      >
         <thead
           className="sticky top-0 z-10"
           style={{ background: "rgba(247,248,252,0.98)" }}
@@ -774,25 +757,27 @@ function PonentesTable({
             <th className="px-4 py-3 font-semibold">Eje temático</th>
             <th className="px-4 py-3 font-semibold">Programación</th>
             {isPanelAuthorized ? (
-              <th className="px-4 py-3 font-semibold">Evaluadores</th>
+              <>
+                <th className="px-4 py-3 font-semibold">Evaluadores</th>
+                <th className="px-4 py-3 font-semibold">Ponente 1</th>
+                <th className="px-4 py-3 font-semibold">Tipo doc.</th>
+                <th className="px-4 py-3 font-semibold">Documento</th>
+                <th className="px-4 py-3 font-semibold">Correo</th>
+                <th className="px-4 py-3 font-semibold">Teléfono</th>
+                <th className="px-4 py-3 font-semibold">País</th>
+                <th className="px-4 py-3 font-semibold">Ciudad</th>
+                <th className="px-4 py-3 font-semibold">Universidad</th>
+                <th className="px-4 py-3 font-semibold">Programa</th>
+                <th className="px-4 py-3 font-semibold">Semestre</th>
+                <th className="px-4 py-3 font-semibold">Grupo investigación</th>
+                <th className="px-4 py-3 font-semibold">Semillero</th>
+                <th className="px-4 py-3 font-semibold">Ponente 2</th>
+                <th className="px-4 py-3 font-semibold">Doc. Ponente 2</th>
+                <th className="px-4 py-3 font-semibold">Correo Ponente 2</th>
+                <th className="px-4 py-3 font-semibold">PDF ponencia</th>
+                <th className="px-4 py-3 font-semibold">PDF cesión</th>
+              </>
             ) : null}
-            <th className="px-4 py-3 font-semibold">Ponente 1</th>
-            <th className="px-4 py-3 font-semibold">Tipo doc.</th>
-            <th className="px-4 py-3 font-semibold">Documento</th>
-            <th className="px-4 py-3 font-semibold">Correo</th>
-            <th className="px-4 py-3 font-semibold">Teléfono</th>
-            <th className="px-4 py-3 font-semibold">País</th>
-            <th className="px-4 py-3 font-semibold">Ciudad</th>
-            <th className="px-4 py-3 font-semibold">Universidad</th>
-            <th className="px-4 py-3 font-semibold">Programa</th>
-            <th className="px-4 py-3 font-semibold">Semestre</th>
-            <th className="px-4 py-3 font-semibold">Grupo investigación</th>
-            <th className="px-4 py-3 font-semibold">Semillero</th>
-            <th className="px-4 py-3 font-semibold">Ponente 2</th>
-            <th className="px-4 py-3 font-semibold">Doc. Ponente 2</th>
-            <th className="px-4 py-3 font-semibold">Correo Ponente 2</th>
-            <th className="px-4 py-3 font-semibold">PDF ponencia</th>
-            <th className="px-4 py-3 font-semibold">PDF cesión</th>
             <th className="px-4 py-3 font-semibold">Fecha registro</th>
           </tr>
         </thead>
@@ -811,15 +796,7 @@ function PonentesTable({
               normalizeText(row.tituloPonencia),
             );
             const rowHasDup =
-              isDocDup || isTitleDup || (isPanelAuthorized && isNameDup);
-            const ponentePrincipal = getProtectedDisplayValue(
-              `${row.nombres} ${row.apellidos}`.trim(),
-              isPanelAuthorized,
-            );
-            const ponenteSecundario = getProtectedDisplayValue(
-              getPonenteSecondaryFullName(row),
-              isPanelAuthorized,
-            );
+              isTitleDup || (isPanelAuthorized && (isDocDup || isNameDup));
 
             return (
               <tr
@@ -851,52 +828,60 @@ function PonentesTable({
                 </td>
                 <td className="px-4 py-3">{getProgramacionLabel(row)}</td>
                 {isPanelAuthorized ? (
-                  <td className="px-4 py-3">{getEvaluadoresLabel(row)}</td>
+                  <>
+                    <td className="px-4 py-3">{getEvaluadoresLabel(row)}</td>
+                    <td className="px-4 py-3" style={dangerCellStyle(isNameDup)}>
+                      {`${row.nombres} ${row.apellidos}`}
+                      {isNameDup ? <DuplicateBadge /> : null}
+                    </td>
+                    <td className="px-4 py-3">{row.tipoDocumento}</td>
+                    <td className="px-4 py-3" style={dangerCellStyle(isDocDup)}>
+                      {row.documento}
+                      {isDocDup ? <DuplicateBadge /> : null}
+                    </td>
+                    <td className="px-4 py-3">{row.email}</td>
+                    <td className="px-4 py-3">{row.telefono}</td>
+                    <td className="px-4 py-3">{row.pais}</td>
+                    <td className="px-4 py-3">{row.ciudad}</td>
+                    <td className="px-4 py-3">{row.universidad ?? "-"}</td>
+                    <td className="px-4 py-3">{row.programa ?? "-"}</td>
+                    <td className="px-4 py-3">{row.semestre ?? "-"}</td>
+                    <td className="px-4 py-3">{row.grupoInvestigacion ?? "-"}</td>
+                    <td className="px-4 py-3">{row.semillero ?? "-"}</td>
+                    <td className="px-4 py-3">
+                      {getPonenteSecondaryFullName(row) || "-"}
+                    </td>
+                    <td className="px-4 py-3">{row.documento2 ?? "-"}</td>
+                    <td className="px-4 py-3">{row.email2 ?? "-"}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          downloadPdfFile(row.ponenciaPdfUrl, "ponencia.pdf")
+                        }
+                        className="underline"
+                        style={{ color: "var(--congreso-primary)" }}
+                      >
+                        Descargar PDF
+                      </button>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          downloadPdfFile(
+                            row.cesionDerechosPdfUrl,
+                            "cesion-derechos.pdf",
+                          )
+                        }
+                        className="underline"
+                        style={{ color: "var(--congreso-primary)" }}
+                      >
+                        Descargar PDF
+                      </button>
+                    </td>
+                  </>
                 ) : null}
-                <td
-                  className="px-4 py-3"
-                  style={dangerCellStyle(isPanelAuthorized && isNameDup)}
-                >
-                  {ponentePrincipal}
-                  {isPanelAuthorized && isNameDup ? <DuplicateBadge /> : null}
-                </td>
-                <td className="px-4 py-3">{row.tipoDocumento}</td>
-                <td className="px-4 py-3" style={dangerCellStyle(isDocDup)}>
-                  {row.documento}
-                  {isDocDup ? <DuplicateBadge /> : null}
-                </td>
-                <td className="px-4 py-3">{row.email}</td>
-                <td className="px-4 py-3">{row.telefono}</td>
-                <td className="px-4 py-3">{row.pais}</td>
-                <td className="px-4 py-3">{row.ciudad}</td>
-                <td className="px-4 py-3">{row.universidad ?? "-"}</td>
-                <td className="px-4 py-3">{row.programa ?? "-"}</td>
-                <td className="px-4 py-3">{row.semestre ?? "-"}</td>
-                <td className="px-4 py-3">{row.grupoInvestigacion ?? "-"}</td>
-                <td className="px-4 py-3">{row.semillero ?? "-"}</td>
-                <td className="px-4 py-3">{ponenteSecundario}</td>
-                <td className="px-4 py-3">{row.documento2 ?? "-"}</td>
-                <td className="px-4 py-3">{row.email2 ?? "-"}</td>
-                <td className="px-4 py-3">
-                  <button
-                    type="button"
-                    onClick={() => downloadPdfFile(row.ponenciaPdfUrl, "ponencia.pdf")}
-                    className="underline"
-                    style={{ color: "var(--congreso-primary)" }}
-                  >
-                    Descargar PDF
-                  </button>
-                </td>
-                <td className="px-4 py-3">
-                  <button
-                    type="button"
-                    onClick={() => downloadPdfFile(row.cesionDerechosPdfUrl, "cesion-derechos.pdf")}
-                    className="underline"
-                    style={{ color: "var(--congreso-primary)" }}
-                  >
-                    Descargar PDF
-                  </button>
-                </td>
                 <td className="px-4 py-3">{formatDate(row.createdAt)}</td>
               </tr>
             );
@@ -1183,7 +1168,7 @@ export default function RegistrationsViewer() {
       toast.success(
         isPanelAuthorized
           ? "Excel generado correctamente."
-          : "Excel generado con los nombres de ponentes y los evaluadores protegidos.",
+          : "Excel generado con la vista restringida de ponencias y sin evaluadores.",
       );
     } catch (error) {
       console.error(error);
@@ -1244,18 +1229,18 @@ export default function RegistrationsViewer() {
             ? {
                 ...item,
                 lineaTematicaLabel: getLineaTematicaLabel(item.lineaTematica),
+                programacionLabel: getProgramacionLabel(item),
                 evaluadoresLabel: getEvaluadoresLabel(item),
               }
             : {
-                ...item,
-                nombres: undefined,
-                apellidos: undefined,
-                nombres2: undefined,
-                apellidos2: undefined,
-                asignaciones: undefined,
-                evaluaciones: undefined,
+                tituloPonencia: item.tituloPonencia,
+                resumen: item.resumen,
+                lineaTematica: item.lineaTematica,
                 lineaTematicaLabel: getLineaTematicaLabel(item.lineaTematica),
-                evaluadoresLabel: undefined,
+                programacionLabel: getProgramacionLabel(item),
+                verificado: item.verificado,
+                agendado: item.agendado,
+                createdAt: item.createdAt,
               },
           normalizedSearch,
         ),
@@ -1287,6 +1272,11 @@ export default function RegistrationsViewer() {
       : activeTab === "evaluadores"
       ? filteredEvaluadores.length
       : filteredAsistentes.length;
+
+  const searchPlaceholder =
+    activeTab === "ponentes" && !isPanelAuthorized
+      ? "Buscar por título, eje temático o programación..."
+      : "Buscar por título, nombre, documento, universidad, correo o cualquier dato...";
 
   return (
     <section id="visualizacion-registros" className="mt-14">
@@ -1354,7 +1344,11 @@ export default function RegistrationsViewer() {
           <Tabs current={activeTab} onChange={setActiveTab} totals={totals} />
 
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <SearchBox value={search} onChange={setSearch} />
+            <SearchBox
+              value={search}
+              onChange={setSearch}
+              placeholder={searchPlaceholder}
+            />
             {activeTab === "ponentes" ? (
               <LineaTematicaFilter value={lineaFilter} onChange={setLineaFilter} />
             ) : (
@@ -1369,9 +1363,6 @@ export default function RegistrationsViewer() {
             {search ? <Chip>Búsqueda: {search}</Chip> : null}
             {activeTab === "ponentes" && lineaFilter ? (
               <Chip>Eje: {getLineaTematicaLabel(lineaFilter)}</Chip>
-            ) : null}
-            {activeTab === "ponentes" && !isPanelAuthorized ? (
-              <Chip>Nombres de ponentes protegidos</Chip>
             ) : null}
             {isPanelAuthorized ? <Chip>Panel habilitado</Chip> : null}
           </div>
