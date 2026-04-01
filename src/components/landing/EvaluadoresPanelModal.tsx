@@ -40,11 +40,11 @@ export default function EvaluadoresPanelModal({
               className="text-xl font-bold"
               style={{ color: "var(--congreso-text)" }}
             >
-              Panel de evaluadores
+              Panel protegido
             </h3>
             <p className="mt-1 text-sm opacity-75">
-              Ingresa el código para habilitar la vista completa de evaluadores y
-              la exportación completa del Excel.
+              Ingresa el código para habilitar los nombres de ponentes, la vista
+              completa de evaluadores y la exportación completa del Excel.
             </p>
           </div>
 
@@ -99,8 +99,9 @@ export default function EvaluadoresPanelModal({
                 color: "#12703f",
               }}
             >
-              Acceso habilitado. Ya puedes visualizar los datos completos de
-              evaluadores y exportar el Excel con esa información.
+              Acceso habilitado. Ya puedes visualizar los nombres de ponentes,
+              los datos completos de evaluadores y exportar el Excel sin esas
+              restricciones.
             </div>
 
             <button

@@ -98,6 +98,10 @@ function getPonenteFullName(p: PonenteAdmin) {
   return normalizeText(`${p.nombres} ${p.apellidos}`);
 }
 
+function getPonenteSecondaryFullName(p: PonenteAdmin) {
+  return `${p.nombres2 ?? ""} ${p.apellidos2 ?? ""}`.trim();
+}
+
 function getEvaluadorFullName(e: EvaluadorAdmin) {
   return normalizeText(`${e.nombres} ${e.apellidos}`);
 }
@@ -120,9 +124,29 @@ function isDuplicate(map: DuplicateMap, value: string) {
   return (map.get(value) ?? 0) > 1;
 }
 
+function getProtectedDisplayValue(
+  value: string | null | undefined,
+  isAuthorized: boolean,
+  hiddenLabel = "Protegido",
+) {
+  const normalized = String(value ?? "").trim();
+  if (!normalized) return "-";
+  return isAuthorized ? normalized : hiddenLabel;
+}
+
+function getProtectedSheetValue(
+  value: string | null | undefined,
+  isAuthorized: boolean,
+  hiddenLabel = "PROTEGIDO",
+) {
+  const normalized = String(value ?? "").trim();
+  if (!normalized) return "";
+  return isAuthorized ? normalized : hiddenLabel;
+}
+
 function buildPonentesSheetRows(
   ponentes: PonenteAdmin[],
-  includeEvaluadores: boolean,
+  includeProtectedData: boolean,
 ) {
   return ponentes.map((p, index) => {
     const programacion = p.programaciones?.[0];
@@ -138,14 +162,26 @@ function buildPonentesSheetRows(
       "HORA INICIO": programacion?.inicio ?? "",
       "HORA FIN": programacion?.fin ?? "",
       SALON: programacion?.salon?.nombre ?? "",
-      "PONENTE 1 NOMBRES": p.nombres,
-      "PONENTE 1 APELLIDOS": p.apellidos,
+      "PONENTE 1 NOMBRES": getProtectedSheetValue(
+        p.nombres,
+        includeProtectedData,
+      ),
+      "PONENTE 1 APELLIDOS": getProtectedSheetValue(
+        p.apellidos,
+        includeProtectedData,
+      ),
       "PONENTE 1 TIPO DOCUMENTO": p.tipoDocumento,
       "PONENTE 1 DOCUMENTO": p.documento,
       "PONENTE 1 EMAIL": p.email,
       "PONENTE 1 TELEFONO": p.telefono,
-      "PONENTE 2 NOMBRES": p.nombres2 ?? "",
-      "PONENTE 2 APELLIDOS": p.apellidos2 ?? "",
+      "PONENTE 2 NOMBRES": getProtectedSheetValue(
+        p.nombres2,
+        includeProtectedData,
+      ),
+      "PONENTE 2 APELLIDOS": getProtectedSheetValue(
+        p.apellidos2,
+        includeProtectedData,
+      ),
       "PONENTE 2 TIPO DOCUMENTO": p.tipoDocumento2 ?? "",
       "PONENTE 2 DOCUMENTO": p.documento2 ?? "",
       "PONENTE 2 EMAIL": p.email2 ?? "",
@@ -162,7 +198,7 @@ function buildPonentesSheetRows(
       "FECHA REGISTRO": formatDate(p.createdAt),
     };
 
-    if (includeEvaluadores) {
+    if (includeProtectedData) {
       return {
         ...base,
         "EVALUADORES ASIGNADOS": getEvaluadoresLabel(p),
@@ -220,7 +256,7 @@ function buildEvaluadoresLockedSheetRows() {
     {
       ESTADO: "PROTEGIDO",
       MENSAJE:
-        "Debes ingresar el código del panel para exportar la hoja de evaluadores y la columna de evaluadores asignados.",
+        "Debes ingresar el código del panel para exportar los nombres de ponentes, la hoja de evaluadores y la columna de evaluadores asignados.",
     },
   ];
 }
@@ -335,7 +371,7 @@ function styleWorksheet(
 
 async function exportExcel(
   data: AdminRegistrosResponse,
-  includeEvaluadores: boolean,
+  includeProtectedData: boolean,
 ) {
   const ExcelJSImport = await import("exceljs");
   const workbook = new ExcelJSImport.Workbook();
@@ -344,8 +380,11 @@ async function exportExcel(
   workbook.created = new Date();
   workbook.modified = new Date();
 
-  const ponentesRows = buildPonentesSheetRows(data.ponentes, includeEvaluadores);
-  const evaluadoresRows = includeEvaluadores
+  const ponentesRows = buildPonentesSheetRows(
+    data.ponentes,
+    includeProtectedData,
+  );
+  const evaluadoresRows = includeProtectedData
     ? buildEvaluadoresSheetRows(data.evaluadores)
     : buildEvaluadoresLockedSheetRows();
   const asistentesRows = buildAsistentesSheetRows(data.asistentes);
@@ -444,7 +483,7 @@ async function exportExcel(
   styleWorksheet(
     evaluadoresSheet,
     evaluadoresRows.length,
-    includeEvaluadores ? duplicateEvaluadorRows : new Set<number>(),
+    includeProtectedData ? duplicateEvaluadorRows : new Set<number>(),
   );
   styleWorksheet(asistentesSheet, asistentesRows.length, duplicateAsistenteRows);
 
@@ -714,13 +753,13 @@ function PonentesTable({
   duplicateDocs,
   duplicateNames,
   duplicateTitles,
-  canViewEvaluadores,
+  isPanelAuthorized,
 }: {
   rows: PonenteAdmin[];
   duplicateDocs: DuplicateMap;
   duplicateNames: DuplicateMap;
   duplicateTitles: DuplicateMap;
-  canViewEvaluadores: boolean;
+  isPanelAuthorized: boolean;
 }) {
   return (
     <TableShell countLabel={`${rows.length} ponencias`}>
@@ -734,7 +773,7 @@ function PonentesTable({
             <th className="px-4 py-3 font-semibold">Título de la ponencia</th>
             <th className="px-4 py-3 font-semibold">Eje temático</th>
             <th className="px-4 py-3 font-semibold">Programación</th>
-            {canViewEvaluadores ? (
+            {isPanelAuthorized ? (
               <th className="px-4 py-3 font-semibold">Evaluadores</th>
             ) : null}
             <th className="px-4 py-3 font-semibold">Ponente 1</th>
@@ -771,7 +810,16 @@ function PonentesTable({
               duplicateTitles,
               normalizeText(row.tituloPonencia),
             );
-            const rowHasDup = isDocDup || isNameDup || isTitleDup;
+            const rowHasDup =
+              isDocDup || isTitleDup || (isPanelAuthorized && isNameDup);
+            const ponentePrincipal = getProtectedDisplayValue(
+              `${row.nombres} ${row.apellidos}`.trim(),
+              isPanelAuthorized,
+            );
+            const ponenteSecundario = getProtectedDisplayValue(
+              getPonenteSecondaryFullName(row),
+              isPanelAuthorized,
+            );
 
             return (
               <tr
@@ -802,12 +850,15 @@ function PonentesTable({
                   <Chip>{getLineaTematicaLabel(row.lineaTematica)}</Chip>
                 </td>
                 <td className="px-4 py-3">{getProgramacionLabel(row)}</td>
-                {canViewEvaluadores ? (
+                {isPanelAuthorized ? (
                   <td className="px-4 py-3">{getEvaluadoresLabel(row)}</td>
                 ) : null}
-                <td className="px-4 py-3" style={dangerCellStyle(isNameDup)}>
-                  {`${row.nombres} ${row.apellidos}`}
-                  {isNameDup ? <DuplicateBadge /> : null}
+                <td
+                  className="px-4 py-3"
+                  style={dangerCellStyle(isPanelAuthorized && isNameDup)}
+                >
+                  {ponentePrincipal}
+                  {isPanelAuthorized && isNameDup ? <DuplicateBadge /> : null}
                 </td>
                 <td className="px-4 py-3">{row.tipoDocumento}</td>
                 <td className="px-4 py-3" style={dangerCellStyle(isDocDup)}>
@@ -823,11 +874,7 @@ function PonentesTable({
                 <td className="px-4 py-3">{row.semestre ?? "-"}</td>
                 <td className="px-4 py-3">{row.grupoInvestigacion ?? "-"}</td>
                 <td className="px-4 py-3">{row.semillero ?? "-"}</td>
-                <td className="px-4 py-3">
-                  {row.nombres2 || row.apellidos2
-                    ? `${row.nombres2 ?? ""} ${row.apellidos2 ?? ""}`.trim()
-                    : "-"}
-                </td>
+                <td className="px-4 py-3">{ponenteSecundario}</td>
                 <td className="px-4 py-3">{row.documento2 ?? "-"}</td>
                 <td className="px-4 py-3">{row.email2 ?? "-"}</td>
                 <td className="px-4 py-3">
@@ -1059,7 +1106,7 @@ export default function RegistrationsViewer() {
   const [isAuthorized, setIsAuthorized] = React.useState(false);
   const [validatingCode, setValidatingCode] = React.useState(false);
 
-  const canViewEvaluadores = isAuthorized;
+  const isPanelAuthorized = isAuthorized;
 
   React.useEffect(() => {
     let mounted = true;
@@ -1132,11 +1179,11 @@ export default function RegistrationsViewer() {
 
     try {
       setExporting(true);
-      await exportExcel(data, canViewEvaluadores);
+      await exportExcel(data, isPanelAuthorized);
       toast.success(
-        canViewEvaluadores
+        isPanelAuthorized
           ? "Excel generado correctamente."
-          : "Excel generado sin la hoja y columna de evaluadores.",
+          : "Excel generado con los nombres de ponentes y los evaluadores protegidos.",
       );
     } catch (error) {
       console.error(error);
@@ -1193,18 +1240,30 @@ export default function RegistrationsViewer() {
     if (normalizedSearch) {
       rows = rows.filter((item) =>
         objectMatchesSearch(
-          {
-            ...item,
-            lineaTematicaLabel: getLineaTematicaLabel(item.lineaTematica),
-            evaluadoresLabel: getEvaluadoresLabel(item),
-          },
+          isPanelAuthorized
+            ? {
+                ...item,
+                lineaTematicaLabel: getLineaTematicaLabel(item.lineaTematica),
+                evaluadoresLabel: getEvaluadoresLabel(item),
+              }
+            : {
+                ...item,
+                nombres: undefined,
+                apellidos: undefined,
+                nombres2: undefined,
+                apellidos2: undefined,
+                asignaciones: undefined,
+                evaluaciones: undefined,
+                lineaTematicaLabel: getLineaTematicaLabel(item.lineaTematica),
+                evaluadoresLabel: undefined,
+              },
           normalizedSearch,
         ),
       );
     }
 
     return rows;
-  }, [data?.ponentes, normalizedSearch, lineaFilter]);
+  }, [data?.ponentes, isPanelAuthorized, normalizedSearch, lineaFilter]);
 
   const filteredEvaluadores = React.useMemo(
     () => (data?.evaluadores ?? []).filter((item) => objectMatchesSearch(item, normalizedSearch)),
@@ -1311,7 +1370,10 @@ export default function RegistrationsViewer() {
             {activeTab === "ponentes" && lineaFilter ? (
               <Chip>Eje: {getLineaTematicaLabel(lineaFilter)}</Chip>
             ) : null}
-            {canViewEvaluadores ? <Chip>Panel habilitado</Chip> : null}
+            {activeTab === "ponentes" && !isPanelAuthorized ? (
+              <Chip>Nombres de ponentes protegidos</Chip>
+            ) : null}
+            {isPanelAuthorized ? <Chip>Panel habilitado</Chip> : null}
           </div>
         ) : null}
 
@@ -1326,13 +1388,13 @@ export default function RegistrationsViewer() {
               duplicateDocs={duplicatePonenteDocs}
               duplicateNames={duplicatePonenteNames}
               duplicateTitles={duplicatePonenciaTitles}
-              canViewEvaluadores={canViewEvaluadores}
+              isPanelAuthorized={isPanelAuthorized}
             />
           ) : (
             <EmptyState message="No se encontraron ponencias con ese criterio de búsqueda o eje temático." />
           )
         ) : activeTab === "evaluadores" ? (
-          !canViewEvaluadores ? (
+          !isPanelAuthorized ? (
             <EmptyState message="Debes ingresar el código en el panel para visualizar los evaluadores." />
           ) : filteredEvaluadores.length ? (
             <EvaluadoresTable
