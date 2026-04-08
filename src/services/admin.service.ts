@@ -1,17 +1,8 @@
+import { getBackendBaseUrl } from "@/src/lib/backend";
 import type { AdminRegistrosResponse } from "@/src/types/admin";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-function getBaseUrl() {
-  if (!BACKEND_URL) {
-    throw new Error("NEXT_PUBLIC_BACKEND_URL no está definida.");
-  }
-
-  return BACKEND_URL.endsWith("/") ? BACKEND_URL.slice(0, -1) : BACKEND_URL;
-}
-
 export async function getAdminRegistros(): Promise<AdminRegistrosResponse> {
-  const baseUrl = getBaseUrl();
+  const baseUrl = getBackendBaseUrl();
 
   const res = await fetch(`${baseUrl}/administracion/registros`, {
     method: "GET",
@@ -19,14 +10,16 @@ export async function getAdminRegistros(): Promise<AdminRegistrosResponse> {
   });
 
   if (!res.ok) {
-    throw new Error("No se pudo obtener la información administrativa.");
+    throw new Error("No se pudo obtener la informacion administrativa.");
   }
 
   return res.json();
 }
 
-export async function asignarEvaluadoresAutomaticamente(cantidadEvaluadoresPorPonente = 2) {
-  const baseUrl = getBaseUrl();
+export async function asignarEvaluadoresAutomaticamente(
+  cantidadEvaluadoresPorPonente = 2,
+) {
+  const baseUrl = getBackendBaseUrl();
 
   const res = await fetch(`${baseUrl}/administracion/asignaciones/automaticas`, {
     method: "POST",
@@ -39,7 +32,26 @@ export async function asignarEvaluadoresAutomaticamente(cantidadEvaluadoresPorPo
   const data = await res.json().catch(() => null);
 
   if (!res.ok) {
-    throw new Error(data?.message ?? "No se pudo realizar la asignación automática.");
+    throw new Error(data?.message ?? "No se pudo realizar la asignacion automatica.");
+  }
+
+  return data;
+}
+
+export async function asignarEvaluadoresTardias() {
+  const baseUrl = getBackendBaseUrl();
+
+  const res = await fetch(`${baseUrl}/administracion/asignaciones/tardias`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    throw new Error(data?.message ?? "No se pudo realizar la asignacion de ponencias tardias.");
   }
 
   return data;

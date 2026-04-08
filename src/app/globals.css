@@ -157,6 +157,7 @@ body::after {
   border-radius: 20px;
   padding: 18px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 
@@ -169,6 +170,7 @@ body::after {
   background: rgba(255, 255, 255, 0.72);
   border-radius: 16px;
   padding: 14px;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 
@@ -212,4 +214,133 @@ body::after {
 .form-input::placeholder,
 .form-textarea::placeholder {
   color: rgba(31, 27, 36, 0.55);
+}
+
+/* =========================
+   RegistrationsViewer
+   ========================= */
+
+.rv-text-main  { color: var(--congreso-text); }
+.rv-text-primary { color: var(--congreso-primary); }
+.rv-link { color: var(--congreso-primary); }
+
+.rv-search-box {
+  background: rgba(255,255,255,0.92);
+  border-color: var(--congreso-border);
+}
+.rv-search-input { color: var(--congreso-text); }
+.rv-clear-btn {
+  background: rgba(0,0,0,0.06);
+  color: var(--congreso-text);
+}
+
+.rv-select {
+  background: rgba(255,255,255,0.92);
+  border-color: var(--congreso-border);
+  color: var(--congreso-text);
+}
+
+.rv-tab {
+  background: rgba(255,255,255,0.9);
+  color: var(--congreso-text);
+  border-color: var(--congreso-border);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+}
+.rv-tab[data-active="true"] {
+  background: linear-gradient(135deg, var(--congreso-primary), #5a3fd6);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 10px 24px rgba(75,52,173,0.22);
+}
+.rv-tab-count {
+  background: rgba(0,0,0,0.06);
+  color: var(--congreso-text);
+}
+.rv-tab[data-active="true"] .rv-tab-count {
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+}
+
+.rv-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.88));
+  border-color: var(--congreso-border);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.06);
+}
+.rv-chip {
+  background: rgba(90,63,214,0.10);
+  color: var(--congreso-primary);
+}
+.rv-dup-badge {
+  background: rgba(217,45,32,0.12);
+  color: #B42318;
+}
+.rv-spinner {
+  border-color: rgba(90,63,214,0.20);
+  border-top-color: var(--congreso-primary);
+}
+.rv-table-shell {
+  background: rgba(255,255,255,0.95);
+  border-color: var(--congreso-border);
+  box-shadow: 0 18px 45px rgba(0,0,0,0.06);
+}
+.rv-table-header {
+  border-color: var(--congreso-border);
+  background: linear-gradient(180deg, rgba(248,249,255,0.9), rgba(255,255,255,0.9));
+}
+.rv-thead { background: rgba(247,248,252,0.98); }
+
+/* =========================
+   Panel modal
+   ========================= */
+.panel-modal-card {
+  background: rgba(255,255,255,0.99);
+  border-color: var(--congreso-border);
+}
+.panel-title       { color: var(--congreso-text); }
+.panel-close-btn   { background: rgba(0,0,0,0.06); color: var(--congreso-text); }
+.panel-input {
+  border-color: var(--congreso-border);
+  color: var(--congreso-text);
+  background: rgba(255,255,255,0.96);
+}
+.panel-btn-login {
+  background: linear-gradient(135deg, var(--congreso-primary), #5a3fd6);
+}
+.panel-btn-toggle[data-enabled="true"]  { background: linear-gradient(135deg, #b42318, #912018); }
+.panel-btn-toggle[data-enabled="false"] { background: linear-gradient(135deg, #1f8f55, #12703f); }
+.panel-btn-late    { background: linear-gradient(135deg, #7a38b8, #5a2f95); }
+.panel-btn-assign  { background: linear-gradient(135deg, #1f6f8f, #155a72); }
+.panel-btn-logout  {
+  background: rgba(217,45,32,0.08);
+  color: #B42318;
+  border-color: rgba(217,45,32,0.18);
+}
+
+/* table rows */
+.rv-row-border { border-color: var(--congreso-border); }
+.rv-row-even   { background: rgba(255,255,255,0.96); }
+.rv-row-odd    { background: rgba(248,249,255,0.82); }
+.rv-row-danger { background: rgba(217,45,32,0.06); }
+.rv-cell-danger { background: rgba(217,45,32,0.10); color: #B42318; font-weight: 700; }
+.rv-cell-title-primary { color: var(--congreso-primary); }
+.rv-cell-title-danger  { color: #B42318; }
+
+/* section wrapper */
+.rv-section {
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,248,252,0.95));
+  border-color: var(--congreso-border);
+  box-shadow: 0 20px 55px rgba(0,0,0,0.07);
+}
+.rv-panel-btn {
+  background: rgba(255,255,255,0.96);
+  border: 1px solid var(--congreso-border);
+  color: var(--congreso-text);
+}
+.rv-export-btn {
+  background: linear-gradient(135deg, #1f8f55, #12703f);
+  box-shadow: 0 14px 28px rgba(18,112,63,0.24);
+}
+.rv-export-btn[data-exporting="true"] {
+  background: linear-gradient(135deg, #7a7a7a, #5d5d5d);
+  box-shadow: none;
 }

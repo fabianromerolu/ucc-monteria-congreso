@@ -2,8 +2,18 @@
 
 import * as React from "react";
 
-function Label({ children }: { children: React.ReactNode }) {
-  return <label className="grid gap-1 text-sm">{children}</label>;
+function Label({
+  children,
+  htmlFor,
+}: {
+  children: React.ReactNode;
+  htmlFor?: string;
+}) {
+  return (
+    <label htmlFor={htmlFor} className="grid gap-1 text-sm">
+      {children}
+    </label>
+  );
 }
 
 function Req({ required }: { required?: boolean }) {
@@ -73,17 +83,22 @@ export function Field({
   required?: boolean;
   disabled?: boolean;
 }) {
+  const inputId = React.useId();
+
   return (
-    <Label>
+    <Label htmlFor={inputId}>
       <span className="font-medium">
         {label} <Req required={required} />
       </span>
       <input
+        id={inputId}
         type={type}
         value={value}
         required={required}
         disabled={disabled}
-        placeholder={placeholder}
+        placeholder={placeholder ?? label}
+        title={label}
+        aria-label={label}
         onChange={(e) => onChange(e.target.value)}
         className="form-input disabled:opacity-50"
       />
@@ -106,15 +121,20 @@ export function SelectField<T extends string>({
   required?: boolean;
   disabled?: boolean;
 }) {
+  const selectId = React.useId();
+
   return (
-    <Label>
+    <Label htmlFor={selectId}>
       <span className="font-medium">
         {label} <Req required={required} />
       </span>
       <select
+        id={selectId}
         value={value}
         required={required}
         disabled={disabled}
+        title={label}
+        aria-label={label}
         onChange={(e) => onChange(e.target.value as T)}
         className="form-select disabled:opacity-50"
       >
@@ -143,16 +163,21 @@ export function Textarea({
   required?: boolean;
   disabled?: boolean;
 }) {
+  const textareaId = React.useId();
+
   return (
-    <Label>
+    <Label htmlFor={textareaId}>
       <span className="font-medium">
         {label} <Req required={required} />
       </span>
       <textarea
+        id={textareaId}
         value={value}
         required={required}
         disabled={disabled}
-        placeholder={placeholder}
+        placeholder={placeholder ?? label}
+        title={label}
+        aria-label={label}
         onChange={(e) => onChange(e.target.value)}
         className="form-textarea disabled:opacity-50"
       />
@@ -173,16 +198,21 @@ export function FileField({
   required?: boolean;
   helper?: string;
 }) {
+  const fileId = React.useId();
+
   return (
-    <Label>
+    <Label htmlFor={fileId}>
       <span className="font-medium">
         {label} <Req required={required} />
       </span>
       {helper ? <span className="text-xs opacity-75">{helper}</span> : null}
       <input
+        id={fileId}
         type="file"
         accept={accept}
         required={required}
+        title={label}
+        aria-label={label}
         onChange={(e) => onChange(e.target.files?.[0])}
         className="form-file"
       />

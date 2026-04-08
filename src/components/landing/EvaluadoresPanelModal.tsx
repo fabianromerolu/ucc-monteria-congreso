@@ -11,6 +11,13 @@ type Props = {
   validating: boolean;
   isAuthorized: boolean;
   onLogout: () => void;
+  attendanceEnabled: boolean;
+  attendanceLoading: boolean;
+  togglingAttendance: boolean;
+  assigningTardias: boolean;
+  onToggleAttendance: () => void;
+  onOpenLatePonenciaForm: () => void;
+  onAsignarEvaluadoresTardias: () => void;
 };
 
 export default function EvaluadoresPanelModal({
@@ -22,98 +29,92 @@ export default function EvaluadoresPanelModal({
   validating,
   isAuthorized,
   onLogout,
+  attendanceEnabled,
+  attendanceLoading,
+  togglingAttendance,
+  assigningTardias,
+  onToggleAttendance,
+  onOpenLatePonenciaForm,
+  onAsignarEvaluadoresTardias,
 }: Props) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-4">
-      <div
-        className="w-full max-w-lg rounded-[28px] border p-6 shadow-2xl"
-        style={{
-          background: "rgba(255,255,255,0.98)",
-          borderColor: "var(--congreso-border)",
-        }}
-      >
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
-            <h3
-              className="text-xl font-bold"
-              style={{ color: "var(--congreso-text)" }}
-            >
-              Panel protegido
-            </h3>
-            <p className="mt-1 text-sm opacity-75">
-              Ingresa el código para habilitar los datos completos de ponentes,
-              la vista completa de evaluadores y la exportación completa del
-              Excel.
-            </p>
-          </div>
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-4">
+      <div className="panel-modal-card w-full max-w-sm rounded-3xl border p-6 shadow-2xl">
 
+        {/* Header */}
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <h3 className="panel-title text-base font-bold">
+            {isAuthorized ? "Panel de administración" : "Panel protegido"}
+          </h3>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl px-3 py-2 text-sm font-medium"
-            style={{
-              background: "rgba(0,0,0,0.06)",
-              color: "var(--congreso-text)",
-            }}
+            className="panel-close-btn rounded-xl px-3 py-1.5 text-xs font-medium"
           >
             Cerrar
           </button>
         </div>
 
         {!isAuthorized ? (
-          <div className="space-y-4">
+          /* ── Login ── */
+          <div className="space-y-3">
             <input
               type="password"
               value={code}
               onChange={(e) => setCode(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !validating && code.trim() && onValidate()}
               placeholder="Código de acceso"
-              className="w-full rounded-2xl border px-4 py-3 text-sm outline-none"
-              style={{
-                borderColor: "var(--congreso-border)",
-                color: "var(--congreso-text)",
-                background: "rgba(255,255,255,0.96)",
-              }}
+              className="panel-input w-full rounded-2xl border px-4 py-3 text-sm outline-none"
             />
-
             <button
               type="button"
               onClick={onValidate}
               disabled={validating || !code.trim()}
-              className="inline-flex w-full items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--congreso-primary), #5a3fd6)",
-              }}
+              className="panel-btn-login inline-flex w-full items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
             >
-              {validating ? "Validando..." : "Validar código"}
+              {validating ? "Validando..." : "Entrar"}
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div
-              className="rounded-2xl border px-4 py-3 text-sm"
-              style={{
-                borderColor: "rgba(18, 112, 63, 0.22)",
-                background: "rgba(18, 112, 63, 0.08)",
-                color: "#12703f",
-              }}
+          /* ── Botones de acción ── */
+          <div className="flex flex-col gap-2.5">
+            <button
+              type="button"
+              onClick={onToggleAttendance}
+              disabled={attendanceLoading || togglingAttendance}
+              data-enabled={String(attendanceEnabled)}
+              className="panel-btn-toggle inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Acceso habilitado. Ya puedes visualizar los datos completos de
-              ponentes, los datos completos de evaluadores y exportar el Excel
-              sin esas restricciones.
-            </div>
+              {togglingAttendance
+                ? "Actualizando..."
+                : attendanceEnabled
+                ? "Deshabilitar asistencias"
+                : "Habilitar asistencias"}
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenLatePonenciaForm}
+              className="panel-btn-late inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold text-white"
+            >
+              Registrar ponencia atrasada
+            </button>
+
+            <button
+              type="button"
+              onClick={onAsignarEvaluadoresTardias}
+              disabled={assigningTardias}
+              className="panel-btn-assign inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {assigningTardias ? "Asignando evaluadores..." : "Asignar evaluadores tardíos"}
+            </button>
 
             <button
               type="button"
               onClick={onLogout}
-              className="inline-flex w-full items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition-all duration-200"
-              style={{
-                background: "rgba(217,45,32,0.10)",
-                color: "#B42318",
-                border: "1px solid rgba(217,45,32,0.18)",
-              }}
+              className="panel-btn-logout mt-1 inline-flex w-full items-center justify-center rounded-2xl border px-5 py-2.5 text-sm font-semibold transition-all duration-200"
             >
               Cerrar acceso
             </button>

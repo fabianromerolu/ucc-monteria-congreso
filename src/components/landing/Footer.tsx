@@ -68,8 +68,8 @@ export default function Footer() {
             </h3>
             <ul className="space-y-3 text-center md:text-left">
               <li>
-                <a href="#inscripciones" className="hover:underline" style={{ color: "var(--congreso-text-on-dark-muted)" }}>
-                  Inscripciones
+                <a href="#asistencias-evento" className="hover:underline" style={{ color: "var(--congreso-text-on-dark-muted)" }}>
+                  Asistencias
                 </a>
               </li>
               <li>
