@@ -201,12 +201,6 @@ function buildPonentesSheetRows(
       "PONENTE 1 DOCUMENTO": p.documento,
       "PONENTE 1 EMAIL": p.email,
       "PONENTE 1 TELEFONO": p.telefono,
-      "PONENTE 2 NOMBRES": p.nombres2 ?? "",
-      "PONENTE 2 APELLIDOS": p.apellidos2 ?? "",
-      "PONENTE 2 TIPO DOCUMENTO": p.tipoDocumento2 ?? "",
-      "PONENTE 2 DOCUMENTO": p.documento2 ?? "",
-      "PONENTE 2 EMAIL": p.email2 ?? "",
-      "PONENTE 2 TELEFONO": p.telefono2 ?? "",
       PAIS: p.pais,
       CIUDAD: p.ciudad,
       UNIVERSIDAD: p.universidad ?? "",
@@ -714,8 +708,10 @@ function dangerCellClass(active: boolean): string {
   return active ? "rv-cell-danger" : "";
 }
 
-function dangerRowClass(active: boolean, even: boolean): string {
+function dangerRowClass(active: boolean, even: boolean, verificado?: boolean): string {
   if (active) return "rv-row-border rv-row-danger";
+  if (verificado === true)  return "rv-row-border rv-row-admitida";
+  if (verificado === false) return "rv-row-border rv-row-rechazada";
   return even ? "rv-row-border rv-row-even" : "rv-row-border rv-row-odd";
 }
 
@@ -779,9 +775,6 @@ function PonentesTable({
                 <th className="px-4 py-3 font-semibold">Semestre</th>
                 <th className="px-4 py-3 font-semibold">Grupo investigación</th>
                 <th className="px-4 py-3 font-semibold">Semillero</th>
-                <th className="px-4 py-3 font-semibold">Ponente 2</th>
-                <th className="px-4 py-3 font-semibold">Doc. Ponente 2</th>
-                <th className="px-4 py-3 font-semibold">Correo Ponente 2</th>
                 <th className="px-4 py-3 font-semibold">PDF ponencia</th>
                 <th className="px-4 py-3 font-semibold">PDF cesión</th>
               </>
@@ -809,7 +802,7 @@ function PonentesTable({
             return (
               <tr
                 key={row.id}
-                className={`border-t transition-colors hover:bg-black/5 ${dangerRowClass(rowHasDup, index % 2 === 0)}`}
+                className={`border-t transition-colors hover:bg-black/5 ${dangerRowClass(rowHasDup, index % 2 === 0, row.verificado)}`}
               >
                 <td className="px-4 py-3 font-semibold">{index + 1}</td>
                 <td
@@ -844,11 +837,6 @@ function PonentesTable({
                     <td className="px-4 py-3">{row.semestre ?? "-"}</td>
                     <td className="px-4 py-3">{row.grupoInvestigacion ?? "-"}</td>
                     <td className="px-4 py-3">{row.semillero ?? "-"}</td>
-                    <td className="px-4 py-3">
-                      {getPonenteSecondaryFullName(row) || "-"}
-                    </td>
-                    <td className="px-4 py-3">{row.documento2 ?? "-"}</td>
-                    <td className="px-4 py-3">{row.email2 ?? "-"}</td>
                     <td className="px-4 py-3">
                       <button
                         type="button"

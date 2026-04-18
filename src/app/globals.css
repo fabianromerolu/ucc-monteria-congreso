@@ -317,10 +317,12 @@ body::after {
 }
 
 /* table rows */
-.rv-row-border { border-color: var(--congreso-border); }
-.rv-row-even   { background: rgba(255,255,255,0.96); }
-.rv-row-odd    { background: rgba(248,249,255,0.82); }
-.rv-row-danger { background: rgba(217,45,32,0.06); }
+.rv-row-border    { border-color: var(--congreso-border); }
+.rv-row-even      { background: rgba(255,255,255,0.96); }
+.rv-row-odd       { background: rgba(248,249,255,0.82); }
+.rv-row-danger    { background: rgba(217,45,32,0.06); }
+.rv-row-admitida  { background: rgba(18,112,63,0.07); }
+.rv-row-rechazada { background: rgba(180,35,24,0.05); }
 .rv-cell-danger { background: rgba(217,45,32,0.10); color: #B42318; font-weight: 700; }
 .rv-cell-title-primary { color: var(--congreso-primary); }
 .rv-cell-title-danger  { color: #B42318; }
@@ -352,18 +354,19 @@ body::after {
 }
 .rv-admission-badge {
   position: absolute;
-  top: 9px;
-  right: -20px;
-  width: 80px;
+  top: 11px;
+  right: -22px;
+  width: 96px;
   text-align: center;
   transform: rotate(35deg);
-  padding: 2px 0;
-  font-size: 8px;
+  padding: 3px 0;
+  font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.06em;
   pointer-events: none;
-  line-height: 1.6;
+  line-height: 1.5;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.18);
 }
 .rv-admission-badge[data-status="admitida"] {
   background: #12703f;
