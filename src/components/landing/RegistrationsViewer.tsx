@@ -699,6 +699,17 @@ function DuplicateBadge() {
   );
 }
 
+function AdmisionBadge({ verificado }: { verificado: boolean }) {
+  return (
+    <span
+      className="rv-admission-badge"
+      data-status={verificado ? "admitida" : "rechazada"}
+    >
+      {verificado ? "Admitida" : "Rechazada"}
+    </span>
+  );
+}
+
 function dangerCellClass(active: boolean): string {
   return active ? "rv-cell-danger" : "";
 }
@@ -802,10 +813,11 @@ function PonentesTable({
               >
                 <td className="px-4 py-3 font-semibold">{index + 1}</td>
                 <td
-                  className={`px-4 py-3 font-semibold ${isTitleDup ? "rv-cell-title-danger rv-cell-danger" : "rv-cell-title-primary"}`}
+                  className={`rv-title-cell px-4 py-3 font-semibold ${isTitleDup ? "rv-cell-title-danger rv-cell-danger" : "rv-cell-title-primary"}`}
                 >
                   {row.tituloPonencia}
                   {isTitleDup ? <DuplicateBadge /> : null}
+                  <AdmisionBadge verificado={row.verificado} />
                 </td>
                 <td className="px-4 py-3">
                   <Chip>{getLineaTematicaLabel(row.lineaTematica)}</Chip>

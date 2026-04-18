@@ -344,3 +344,32 @@ body::after {
   background: linear-gradient(135deg, #7a7a7a, #5d5d5d);
   box-shadow: none;
 }
+
+/* ── Badge de admisión (diagonal/ribbon) ── */
+.rv-title-cell {
+  position: relative;
+  overflow: hidden;
+}
+.rv-admission-badge {
+  position: absolute;
+  top: 9px;
+  right: -20px;
+  width: 80px;
+  text-align: center;
+  transform: rotate(35deg);
+  padding: 2px 0;
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  pointer-events: none;
+  line-height: 1.6;
+}
+.rv-admission-badge[data-status="admitida"] {
+  background: #12703f;
+  color: #fff;
+}
+.rv-admission-badge[data-status="rechazada"] {
+  background: #b42318;
+  color: #fff;
+}
