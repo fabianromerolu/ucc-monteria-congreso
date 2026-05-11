@@ -310,6 +310,7 @@ body::after {
 .panel-btn-toggle[data-enabled="false"] { background: linear-gradient(135deg, #1f8f55, #12703f); }
 .panel-btn-late    { background: linear-gradient(135deg, #7a38b8, #5a2f95); }
 .panel-btn-assign  { background: linear-gradient(135deg, #1f6f8f, #155a72); }
+.panel-btn-cert    { background: linear-gradient(135deg, #12703f, #1f8f55); }
 .panel-btn-logout  {
   background: rgba(217,45,32,0.08);
   color: #B42318;

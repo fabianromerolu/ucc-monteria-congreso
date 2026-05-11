@@ -14,8 +14,10 @@ type Props = {
   attendanceEnabled: boolean;
   attendanceLoading: boolean;
   togglingAttendance: boolean;
+  generatingCertificates: boolean;
   assigningTardias: boolean;
   onToggleAttendance: () => void;
+  onGenerateCertificates: () => void;
   onOpenLatePonenciaForm: () => void;
   onAsignarEvaluadoresTardias: () => void;
 };
@@ -32,8 +34,10 @@ export default function EvaluadoresPanelModal({
   attendanceEnabled,
   attendanceLoading,
   togglingAttendance,
+  generatingCertificates,
   assigningTardias,
   onToggleAttendance,
+  onGenerateCertificates,
   onOpenLatePonenciaForm,
   onAsignarEvaluadoresTardias,
 }: Props) {
@@ -42,11 +46,9 @@ export default function EvaluadoresPanelModal({
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-4">
       <div className="panel-modal-card w-full max-w-sm rounded-3xl border p-6 shadow-2xl">
-
-        {/* Header */}
         <div className="mb-5 flex items-center justify-between gap-3">
           <h3 className="panel-title text-base font-bold">
-            {isAuthorized ? "Panel de administración" : "Panel protegido"}
+            {isAuthorized ? "Panel de administracion" : "Panel protegido"}
           </h3>
           <button
             type="button"
@@ -58,14 +60,15 @@ export default function EvaluadoresPanelModal({
         </div>
 
         {!isAuthorized ? (
-          /* ── Login ── */
           <div className="space-y-3">
             <input
               type="password"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !validating && code.trim() && onValidate()}
-              placeholder="Código de acceso"
+              onKeyDown={(e) =>
+                e.key === "Enter" && !validating && code.trim() && onValidate()
+              }
+              placeholder="Codigo de acceso"
               className="panel-input w-full rounded-2xl border px-4 py-3 text-sm outline-none"
             />
             <button
@@ -78,7 +81,6 @@ export default function EvaluadoresPanelModal({
             </button>
           </div>
         ) : (
-          /* ── Botones de acción ── */
           <div className="flex flex-col gap-2.5">
             <button
               type="button"
@@ -90,8 +92,8 @@ export default function EvaluadoresPanelModal({
               {togglingAttendance
                 ? "Actualizando..."
                 : attendanceEnabled
-                ? "Deshabilitar asistencias"
-                : "Habilitar asistencias"}
+                  ? "Deshabilitar asistencias"
+                  : "Habilitar asistencias"}
             </button>
 
             <button
@@ -108,7 +110,20 @@ export default function EvaluadoresPanelModal({
               disabled={assigningTardias}
               className="panel-btn-assign inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {assigningTardias ? "Asignando evaluadores..." : "Asignar evaluadores tardíos"}
+              {assigningTardias
+                ? "Asignando evaluadores..."
+                : "Asignar evaluadores tardios"}
+            </button>
+
+            <button
+              type="button"
+              onClick={onGenerateCertificates}
+              disabled={generatingCertificates}
+              className="panel-btn-cert inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {generatingCertificates
+                ? "Generando certificados..."
+                : "Generar certificados"}
             </button>
 
             <button

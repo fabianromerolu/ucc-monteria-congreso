@@ -24,6 +24,8 @@ import {
   buildAttendanceSummary,
   getAttendanceFullName,
   type AttendanceAdminSummary,
+  type AttendanceCertificateDispatchRecord,
+  type AttendanceCertificateDispatchResponse,
   type AttendanceRecord,
 } from "@/src/types/attendance";
 
@@ -142,9 +144,49 @@ function getAttendanceRoleLabel(role: AttendanceRecord["role"]) {
 }
 
 function getCertificateStatusLabel(status?: string | null) {
-  if (status === "sent") return "Enviado";
+  if (status === "sent") return "Generado";
   if (status === "error") return "Error";
   return "Pendiente";
+}
+
+function getDispatchRecordName(record: AttendanceCertificateDispatchRecord) {
+  return (
+    record.fullName ??
+    `${record.nombres ?? ""} ${record.apellidos ?? ""}`.trim() ??
+    "-"
+  );
+}
+
+function buildCertificateExplanation(result: AttendanceCertificateDispatchResponse) {
+  const failedRecords = result.failedRecords ?? [];
+  const existingErrorRecords = result.existingErrorRecords ?? [];
+  const generated = result.generated ?? result.sent ?? 0;
+
+  if (failedRecords.length) {
+    const roleList = [
+      ...new Set(failedRecords.map((record) => String(record.role ?? "").toLowerCase())),
+    ].filter(Boolean);
+
+    if (roleList.includes("evaluador")) {
+      return "Para evaluadores el certificado necesita encontrar al evaluador y sus ponencias asignadas. Para ponentes y asistentes basta con la asistencia; si alguno de esos roles falla, revisa el detalle porque normalmente sera un problema de plantilla, conversion a PDF o archivo.";
+    }
+
+    if (roleList.includes("ponente") || roleList.includes("asistente")) {
+      return "Para ponentes y asistentes el unico requisito es que la asistencia exista. Si fallo, el backend encontro un problema tecnico al crear el Word/PDF o al leer la plantilla; revisa el detalle de cada registro.";
+    }
+
+    return "El backend intento crear el archivo Word/PDF, pero uno o mas registros fallaron. Revisa el detalle de cada registro arriba; normalmente el mensaje indica si falta una inscripcion, una plantilla o la conversion a PDF.";
+  }
+
+  if (!generated && existingErrorRecords.length) {
+    return "No habia registros pendientes nuevos. Sin embargo, existen registros que ya estaban en error; revisa el detalle para corregir el rol o la inscripcion antes de volver a generar.";
+  }
+
+  if (generated > 0) {
+    return "Los certificados generados ya quedaron disponibles para consulta por cedula en la pagina principal.";
+  }
+
+  return "No habia asistencias pendientes para procesar. Registra una asistencia nueva o corrige los registros con error si esperabas generar un certificado.";
 }
 
 function buildCountMap(values: string[]): DuplicateMap {
@@ -270,9 +312,10 @@ function buildAttendanceSheetRows(records: AttendanceRecord[]) {
     TELEFONO: record.telefono,
     INSTITUCION: record.institucion,
     CIUDAD: record.ciudad,
+    SEMILLERO: record.semillero ?? "",
     ORIGEN: record.source,
     "ESTADO CERTIFICADO": getCertificateStatusLabel(record.certificateStatus),
-    "FECHA ENVIO CERTIFICADO": formatDate(record.certificateSentAt),
+    "FECHA GENERACION CERTIFICADO": formatDate(record.certificateSentAt),
     "FECHA REGISTRO": formatDate(record.createdAt),
     "ERROR CERTIFICADO": record.certificateError ?? "",
   }));
@@ -1051,7 +1094,7 @@ function AttendanceTable({
 }) {
   return (
     <TableShell countLabel={`${rows.length} asistencias`}>
-      <table className="min-w-[1480px] w-full text-sm">
+      <table className="min-w-[1560px] w-full text-sm">
         <thead
           className="rv-thead sticky top-0 z-10"
         >
@@ -1066,9 +1109,10 @@ function AttendanceTable({
             <th className="px-4 py-3 font-semibold">Telefono</th>
             <th className="px-4 py-3 font-semibold">Institucion</th>
             <th className="px-4 py-3 font-semibold">Ciudad</th>
+            <th className="px-4 py-3 font-semibold">Semillero</th>
             <th className="px-4 py-3 font-semibold">Origen</th>
             <th className="px-4 py-3 font-semibold">Certificado</th>
-            <th className="px-4 py-3 font-semibold">Envio certificado</th>
+            <th className="px-4 py-3 font-semibold">Generacion certificado</th>
             <th className="px-4 py-3 font-semibold">Fecha registro</th>
             <th className="px-4 py-3 font-semibold">Ultimo error</th>
           </tr>
@@ -1111,6 +1155,7 @@ function AttendanceTable({
                 <td className="px-4 py-3">{row.telefono}</td>
                 <td className="px-4 py-3">{row.institucion}</td>
                 <td className="px-4 py-3">{row.ciudad}</td>
+                <td className="px-4 py-3">{row.semillero ?? "-"}</td>
                 <td className="px-4 py-3">
                   <Chip>{String(row.source ?? "-")}</Chip>
                 </td>
@@ -1126,6 +1171,136 @@ function AttendanceTable({
         </tbody>
       </table>
     </TableShell>
+  );
+}
+
+function CertificateGenerationResultModal({
+  result,
+  onClose,
+}: {
+  result: AttendanceCertificateDispatchResponse;
+  onClose: () => void;
+}) {
+  const failedRecords = result.failedRecords ?? [];
+  const existingErrorRecords = result.existingErrorRecords ?? [];
+  const generatedRecords = result.generatedRecords ?? [];
+  const hasFailures = failedRecords.length > 0 || existingErrorRecords.length > 0;
+  const title = hasFailures
+    ? "Certificados con novedades"
+    : "Generacion de certificados";
+  const explanation = buildCertificateExplanation(result);
+
+  return (
+    <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/55 p-4">
+      <div
+        className="max-h-[88vh] w-full max-w-3xl overflow-hidden rounded-3xl border bg-white shadow-2xl"
+        style={{ borderColor: "var(--congreso-border)" }}
+      >
+        <div
+          className="flex items-start justify-between gap-4 border-b p-5"
+          style={{ borderColor: "var(--congreso-border)" }}
+        >
+          <div>
+            <p
+              className="text-xs font-semibold uppercase tracking-[0.16em]"
+              style={{ color: "var(--congreso-primary)" }}
+            >
+              Respuesta del backend
+            </p>
+            <h3 className="mt-1 text-xl font-bold">{title}</h3>
+            <p className="mt-1 text-sm opacity-75">
+              {result.message ??
+                `Generados: ${result.generated ?? result.sent}. Fallidos: ${result.failed}.`}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl bg-black/5 px-3 py-2 text-sm font-semibold"
+          >
+            Cerrar
+          </button>
+        </div>
+
+        <div className="max-h-[calc(88vh-92px)] overflow-y-auto p-5">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl bg-black/[0.04] p-4">
+              <p className="text-xs font-semibold uppercase opacity-60">Procesados</p>
+              <p className="mt-1 text-2xl font-bold">{result.processed ?? 0}</p>
+            </div>
+            <div className="rounded-2xl bg-emerald-500/10 p-4 text-emerald-800">
+              <p className="text-xs font-semibold uppercase opacity-70">Generados</p>
+              <p className="mt-1 text-2xl font-bold">{result.generated ?? result.sent}</p>
+            </div>
+            <div className="rounded-2xl bg-red-500/10 p-4 text-red-800">
+              <p className="text-xs font-semibold uppercase opacity-70">Fallidos</p>
+              <p className="mt-1 text-2xl font-bold">{result.failed}</p>
+            </div>
+          </div>
+
+          {generatedRecords.length ? (
+            <div className="mt-5 rounded-2xl border p-4" style={{ borderColor: "var(--congreso-border)" }}>
+              <p className="font-semibold">Registros generados</p>
+              <div className="mt-3 grid gap-2">
+                {generatedRecords.map((record) => (
+                  <div key={record.id} className="rounded-xl bg-emerald-500/10 p-3 text-sm">
+                    <strong>{getDispatchRecordName(record)}</strong> · {record.role} · {record.documento}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {failedRecords.length ? (
+            <div className="mt-5 rounded-2xl border p-4" style={{ borderColor: "rgba(180,35,24,0.22)" }}>
+              <p className="font-semibold text-red-800">Registros fallidos</p>
+              <div className="mt-3 grid gap-2">
+                {failedRecords.map((record) => (
+                  <div key={record.id} className="rounded-xl bg-red-500/10 p-3 text-sm text-red-900">
+                    <p>
+                      <strong>{getDispatchRecordName(record)}</strong> · {record.role} · {record.documento}
+                    </p>
+                    <p className="mt-1 opacity-85">
+                      {record.error ?? record.certificateError ?? "Sin detalle de error."}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {existingErrorRecords.length ? (
+            <div className="mt-5 rounded-2xl border p-4" style={{ borderColor: "rgba(180,35,24,0.22)" }}>
+              <p className="font-semibold text-red-800">Errores existentes</p>
+              <div className="mt-3 grid gap-2">
+                {existingErrorRecords.map((record) => (
+                  <div key={record.id} className="rounded-xl bg-red-500/10 p-3 text-sm text-red-900">
+                    <p>
+                      <strong>{getDispatchRecordName(record)}</strong> · {record.role} · {record.documento}
+                    </p>
+                    <p className="mt-1 opacity-85">
+                      {record.certificateError ?? "Sin detalle de error."}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="mt-5 rounded-2xl border p-4" style={{ borderColor: "var(--congreso-border)" }}>
+            <p className="font-semibold">Respuesta tecnica del back</p>
+            <pre className="mt-3 max-h-64 overflow-auto rounded-2xl bg-black p-4 text-xs text-white">
+              {JSON.stringify(result, null, 2)}
+            </pre>
+          </div>
+
+          <div className="mt-5 rounded-2xl bg-violet-500/10 p-4 text-sm">
+            <p className="font-semibold">Explicacion sencilla</p>
+            <p className="mt-1 opacity-85">{explanation}</p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1154,6 +1329,8 @@ export default function RegistrationsViewer({
     React.useState<AttendanceAdminSummary | null>(null);
   const [togglingAttendance, setTogglingAttendance] = React.useState(false);
   const [sendingCertificates, setSendingCertificates] = React.useState(false);
+  const [certificateResult, setCertificateResult] =
+    React.useState<AttendanceCertificateDispatchResponse | null>(null);
   const [assigningTardias, setAssigningTardias] = React.useState(false);
   const [latePonenciaOpen, setLatePonenciaOpen] = React.useState(false);
 
@@ -1346,18 +1523,31 @@ export default function RegistrationsViewer({
     try {
       setSendingCertificates(true);
       const result = await sendAttendanceCertificates(adminCode);
-      toast.success(
-        result.message ??
-          `Proceso finalizado. Enviados: ${result.sent}. Fallidos: ${result.failed}.`,
-      );
+      setCertificateResult(result);
+      if (result.failed > 0 || (result.existingErrorRecords?.length ?? 0) > 0) {
+        toast.error(result.message ?? "Hay certificados con errores.");
+      } else {
+        toast.success(
+          result.message ??
+            `Proceso finalizado. Generados: ${result.generated ?? result.sent}. Fallidos: ${result.failed}.`,
+        );
+      }
       await loadAttendanceAdminData();
     } catch (error) {
       console.error(error);
-      toast.error(
+      const message =
         error instanceof Error
           ? error.message
-          : "No se pudieron enviar los certificados.",
-      );
+          : "No se pudieron generar los certificados.";
+      toast.error(message);
+      setCertificateResult({
+        message,
+        sent: 0,
+        generated: 0,
+        failed: 1,
+        processed: 0,
+        failedRecords: [],
+      });
     } finally {
       setSendingCertificates(false);
     }
@@ -1635,7 +1825,7 @@ export default function RegistrationsViewer({
         ) : (
           <EmptyState message="No se encontraron asistentes con ese criterio de búsqueda." />
         ) : !isPanelAuthorized ? (
-          <EmptyState message="Debes ingresar el codigo en el panel para visualizar las asistencias y enviar certificados." />
+          <EmptyState message="Debes ingresar el codigo en el panel para visualizar las asistencias y generar certificados." />
         ) : attendanceLoading ? (
           <LoaderCard />
         ) : attendanceError ? (
@@ -1663,8 +1853,10 @@ export default function RegistrationsViewer({
         attendanceEnabled={attendanceEnabled}
         attendanceLoading={attendanceLoading}
         togglingAttendance={togglingAttendance}
+        generatingCertificates={sendingCertificates}
         assigningTardias={assigningTardias}
         onToggleAttendance={handleToggleAttendance}
+        onGenerateCertificates={handleSendCertificates}
         onAsignarEvaluadoresTardias={handleAsignarEvaluadoresTardias}
         onOpenLatePonenciaForm={() => {
           setPanelOpen(false);
@@ -1677,6 +1869,13 @@ export default function RegistrationsViewer({
         onClose={() => setLatePonenciaOpen(false)}
         onSuccess={loadRegistrations}
       />
+
+      {certificateResult ? (
+        <CertificateGenerationResultModal
+          result={certificateResult}
+          onClose={() => setCertificateResult(null)}
+        />
+      ) : null}
     </section>
   );
 }

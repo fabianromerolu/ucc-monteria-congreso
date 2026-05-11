@@ -7,6 +7,7 @@ import {
 import type {
   AttendanceAdminResponse,
   AttendanceCertificateDispatchResponse,
+  AttendanceCertificateLookupResponse,
   AttendanceInput,
   AttendancePublicConfig,
   AttendanceRecord,
@@ -31,8 +32,25 @@ type AttendanceDispatchApiResponse = {
   message?: string;
   sent?: number;
   enviados?: number;
+  generated?: number;
+  generados?: number;
   failed?: number;
   fallidos?: number;
+  processed?: number;
+  procesados?: number;
+  retryErrors?: boolean;
+  generatedRecords?: AttendanceCertificateDispatchResponse["generatedRecords"];
+  registrosGenerados?: AttendanceCertificateDispatchResponse["generatedRecords"];
+  failedRecords?: AttendanceCertificateDispatchResponse["failedRecords"];
+  registrosFallidos?: AttendanceCertificateDispatchResponse["failedRecords"];
+  existingErrorRecords?: AttendanceCertificateDispatchResponse["existingErrorRecords"];
+  registrosConError?: AttendanceCertificateDispatchResponse["existingErrorRecords"];
+};
+
+type AttendanceCertificateLookupApiResponse = AttendanceCertificateLookupResponse & {
+  estado?: AttendanceCertificateLookupResponse["status"];
+  mensaje?: string;
+  certificados?: AttendanceCertificateLookupResponse["certificates"];
 };
 
 function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
@@ -55,6 +73,8 @@ export async function getAttendancePublicConfig(): Promise<AttendancePublicConfi
   const response = await fetch(`${baseUrl}/asistencias/configuracion-publica`, {
     method: "GET",
     cache: "no-store",
+  }).catch(() => {
+    throw new Error("No se pudo conectar con el servidor de asistencias.");
   });
 
   if (!response.ok) {
@@ -88,9 +108,14 @@ export async function registerAttendance(data: AttendanceInput): Promise<void> {
         telefono: data.telefono,
         institucion: data.institucion,
         ciudad: data.ciudad,
+        semillero: data.semillero,
         source: data.source,
       }),
     ),
+  }).catch(() => {
+    throw new Error(
+      "No se pudo conectar con el servidor. Verifica que el backend este encendido.",
+    );
   });
 
   if (!response.ok) {
@@ -165,12 +190,13 @@ export async function sendAttendanceCertificates(
 ): Promise<AttendanceCertificateDispatchResponse> {
   const baseUrl = getBackendBaseUrl();
   const response = await fetch(
-    `${baseUrl}/administracion/asistencias/certificados/enviar`,
+    `${baseUrl}/administracion/asistencias/certificados/generar`,
     {
       method: "POST",
       headers: buildAdminHeaders(adminCode),
       body: JSON.stringify({
         pendingOnly: true,
+        retryErrors: true,
       }),
     },
   );
@@ -186,6 +212,50 @@ export async function sendAttendanceCertificates(
   return {
     message: data.message,
     sent: Number(data.sent ?? data.enviados ?? 0),
+    generated: Number(data.generated ?? data.generados ?? data.sent ?? data.enviados ?? 0),
     failed: Number(data.failed ?? data.fallidos ?? 0),
+    processed: Number(data.processed ?? data.procesados ?? 0),
+    retryErrors: Boolean(data.retryErrors ?? true),
+    generatedRecords: data.generatedRecords ?? data.registrosGenerados ?? [],
+    failedRecords: data.failedRecords ?? data.registrosFallidos ?? [],
+    existingErrorRecords: data.existingErrorRecords ?? data.registrosConError ?? [],
   };
+}
+
+export async function lookupAttendanceCertificate(
+  documento: string,
+): Promise<AttendanceCertificateLookupResponse> {
+  const baseUrl = getBackendBaseUrl();
+  const params = new URLSearchParams({ documento });
+  const response = await fetch(
+    `${baseUrl}/asistencias/certificados/consulta?${params.toString()}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    },
+  );
+
+  const data = (await readJsonSafe<AttendanceCertificateLookupApiResponse>(response)) ?? null;
+
+  if (!response.ok) {
+    throw new Error(
+      getApiErrorMessage(data, "No se pudo consultar el certificado."),
+    );
+  }
+
+  return {
+    status: data?.status ?? data?.estado ?? "error",
+    message:
+      data?.message ??
+      data?.mensaje ??
+      "No se pudo interpretar la respuesta del certificado.",
+    certificates: data?.certificates ?? data?.certificados ?? [],
+  };
+}
+
+export function getAttendanceCertificateDownloadUrl(downloadUrl: string) {
+  const baseUrl = getBackendBaseUrl();
+  return downloadUrl.startsWith("http")
+    ? downloadUrl
+    : `${baseUrl}${downloadUrl.startsWith("/") ? "" : "/"}${downloadUrl}`;
 }

@@ -28,6 +28,7 @@ export type AttendanceInput = {
   telefono: string;
   institucion: string;
   ciudad: string;
+  semillero?: string;
   source: AttendanceSource;
 };
 
@@ -42,6 +43,7 @@ export type AttendanceRecord = {
   telefono: string;
   institucion: string;
   ciudad: string;
+  semillero?: string | null;
   source: AttendanceSource | string;
   createdAt: string;
   certificateStatus: CertificateStatus | string;
@@ -74,7 +76,48 @@ export type AttendanceAdminResponse = {
 export type AttendanceCertificateDispatchResponse = {
   message?: string;
   sent: number;
+  generated?: number;
   failed: number;
+  processed?: number;
+  retryErrors?: boolean;
+  generatedRecords?: AttendanceCertificateDispatchRecord[];
+  failedRecords?: AttendanceCertificateDispatchRecord[];
+  existingErrorRecords?: AttendanceCertificateDispatchRecord[];
+};
+
+export type AttendanceCertificateDispatchRecord = {
+  id: string;
+  role: AttendanceRole | string;
+  nombres: string;
+  apellidos: string;
+  fullName?: string;
+  documento: string;
+  email?: string;
+  semillero?: string | null;
+  certificateStatus?: string;
+  certificateError?: string | null;
+  error?: string | null;
+  linkedRegistrationId?: string | null;
+};
+
+export type AttendanceCertificateFile = {
+  role: AttendanceRole;
+  fullName: string;
+  generatedAt?: string | null;
+  downloadUrl: string;
+  filename: string;
+};
+
+export type AttendanceCertificateLookupStatus =
+  | "not_registered"
+  | "pending"
+  | "generated"
+  | "error";
+
+export type AttendanceCertificateLookupResponse = {
+  status: AttendanceCertificateLookupStatus;
+  message: string;
+  certificates: AttendanceCertificateFile[];
 };
 
 export const ATTENDANCE_ROLE_META: Record<

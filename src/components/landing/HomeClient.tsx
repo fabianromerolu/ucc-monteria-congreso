@@ -5,6 +5,7 @@ import * as React from "react";
 import Hero from "../landing/Hero";
 import RegistrationsViewer from "../landing/RegistrationsViewer";
 import AttendancePublicSection from "../landing/AttendancePublicSection";
+import CertificateLookupWidget from "../landing/CertificateLookupWidget";
 import { getAttendancePublicConfig } from "@/src/services/attendance.service";
 
 export default function HomeClient() {
@@ -41,16 +42,19 @@ export default function HomeClient() {
   }, []);
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 md:py-12">
-      <Hero />
-      <AttendancePublicSection
-        enabled={attendanceEnabled}
-        loading={attendanceConfigLoading}
-      />
-      <RegistrationsViewer
-        attendanceEnabled={attendanceEnabled}
-        onAttendanceEnabledChange={setAttendanceEnabled}
-      />
-    </main>
+    <>
+      <CertificateLookupWidget />
+      <main className="mx-auto max-w-6xl px-4 py-8 md:py-12">
+        <Hero />
+        <AttendancePublicSection
+          enabled={attendanceEnabled}
+          loading={attendanceConfigLoading}
+        />
+        <RegistrationsViewer
+          attendanceEnabled={attendanceEnabled}
+          onAttendanceEnabledChange={setAttendanceEnabled}
+        />
+      </main>
+    </>
   );
 }

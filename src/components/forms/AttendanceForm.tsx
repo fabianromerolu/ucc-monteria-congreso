@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { Divider, Field, SelectField, SubmitButton } from "./_fields";
@@ -29,6 +30,52 @@ type Props = {
   initialSource?: string;
 };
 
+function toUpperInput(value: string) {
+  return value.toLocaleUpperCase("es-CO");
+}
+
+function AttendanceConfigLoader({ roleLabel }: { roleLabel: string }) {
+  return (
+    <section className="grid gap-4 form-shell">
+      <div
+        className="overflow-hidden rounded-2xl border p-5"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(255,255,255,0.96), rgba(250,247,255,0.92))",
+          borderColor: "var(--congreso-border)",
+        }}
+      >
+        <div className="flex items-center gap-4">
+          <div
+            className="grid h-12 w-12 place-items-center rounded-2xl text-white shadow-lg"
+            style={{ background: "var(--congreso-primary)" }}
+            aria-hidden
+          >
+            <Loader2 className="animate-spin" size={24} />
+          </div>
+          <div>
+            <p className="font-semibold">Preparando formulario de asistencia</p>
+            <p className="mt-1 text-sm opacity-75">
+              Estamos validando si el registro para {roleLabel.toLowerCase()}s
+              se encuentra habilitado.
+            </p>
+          </div>
+        </div>
+
+        <div
+          className="mt-5 h-2 overflow-hidden rounded-full"
+          style={{ background: "rgba(119,7,172,0.10)" }}
+        >
+          <div
+            className="h-full w-2/3 animate-pulse rounded-full"
+            style={{ background: "linear-gradient(90deg, #7707ac, #1f8f55)" }}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function AttendanceForm({ role, initialSource }: Props) {
   const meta = ATTENDANCE_ROLE_META[role];
   const source: AttendanceSource = isAttendanceSource(initialSource)
@@ -39,6 +86,7 @@ export default function AttendanceForm({ role, initialSource }: Props) {
   const [loadingConfig, setLoadingConfig] = React.useState(true);
   const [submitting, setSubmitting] = React.useState(false);
   const [submitted, setSubmitted] = React.useState(false);
+  const [formError, setFormError] = React.useState<string | null>(null);
 
   const [nombres, setNombres] = React.useState("");
   const [apellidos, setApellidos] = React.useState("");
@@ -48,6 +96,7 @@ export default function AttendanceForm({ role, initialSource }: Props) {
   const [telefono, setTelefono] = React.useState("");
   const [institucion, setInstitucion] = React.useState("");
   const [ciudad, setCiudad] = React.useState("");
+  const [semillero, setSemillero] = React.useState("");
 
   React.useEffect(() => {
     let mounted = true;
@@ -61,7 +110,12 @@ export default function AttendanceForm({ role, initialSource }: Props) {
         setEnabled(config.enabled);
       } catch (error) {
         console.error(error);
-        toast.error("No se pudo verificar si las asistencias estan habilitadas.");
+        const message =
+          error instanceof Error
+            ? error.message
+            : "No se pudo verificar si las asistencias estan habilitadas.";
+        setFormError(message);
+        toast.error(message);
 
         if (!mounted) return;
         setEnabled(false);
@@ -89,6 +143,7 @@ export default function AttendanceForm({ role, initialSource }: Props) {
 
     try {
       setSubmitting(true);
+      setFormError(null);
       await registerAttendance({
         role,
         nombres,
@@ -99,6 +154,7 @@ export default function AttendanceForm({ role, initialSource }: Props) {
         telefono,
         institucion,
         ciudad,
+        semillero,
         source,
       });
 
@@ -106,25 +162,19 @@ export default function AttendanceForm({ role, initialSource }: Props) {
       toast.success("Asistencia registrada correctamente.");
     } catch (error) {
       console.error(error);
-      toast.error(
+      const message =
         error instanceof Error
           ? error.message
-          : "No se pudo registrar la asistencia.",
-      );
+          : "No se pudo registrar la asistencia.";
+      setFormError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
   }
 
   if (loadingConfig) {
-    return (
-      <section className="grid gap-4 form-shell">
-        <Divider
-          title="Verificando disponibilidad"
-          desc="Estamos consultando si el registro de asistencias esta habilitado."
-        />
-      </section>
-    );
+    return <AttendanceConfigLoader roleLabel={meta.label} />;
   }
 
   if (!enabled) {
@@ -151,6 +201,21 @@ export default function AttendanceForm({ role, initialSource }: Props) {
           title="Registro de asistencias cerrado"
           desc="Por ahora no es posible diligenciar este formulario."
         />
+
+        {formError ? (
+          <div
+            role="alert"
+            className="rounded-2xl border p-4 text-sm"
+            style={{
+              background: "rgba(180,35,24,0.08)",
+              borderColor: "rgba(180,35,24,0.22)",
+              color: "#8a1f16",
+            }}
+          >
+            <p className="font-semibold">Detalle del problema</p>
+            <p className="mt-1 opacity-85">{formError}</p>
+          </div>
+        ) : null}
 
         <div
           className="rounded-2xl border p-6 text-center"
@@ -211,8 +276,9 @@ export default function AttendanceForm({ role, initialSource }: Props) {
             Gracias por registrar tu asistencia
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-sm opacity-80">
-            Si tu participacion aplica para certificado, el equipo del evento lo
-            enviara posteriormente al correo registrado.
+            Esta asistencia es importante para la generacion del certificado.
+            Unos dias despues del evento podras descargarlo desde la pagina del
+            congreso.
           </p>
 
           <div className="mt-5 flex justify-center">
@@ -259,17 +325,44 @@ export default function AttendanceForm({ role, initialSource }: Props) {
         desc="Completa los siguientes datos para dejar la asistencia registrada en la base de datos del evento."
       />
 
+      {formError ? (
+        <div
+          role="alert"
+          className="rounded-2xl border p-4 text-sm"
+          style={{
+            background: "rgba(180,35,24,0.08)",
+            borderColor: "rgba(180,35,24,0.22)",
+            color: "#8a1f16",
+          }}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="font-semibold">No se pudo registrar la asistencia</p>
+              <p className="mt-1 opacity-85">{formError}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFormError(null)}
+              className="rounded-lg px-2 py-1 text-xs font-semibold"
+              style={{ background: "rgba(180,35,24,0.10)" }}
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 md:grid-cols-2">
         <Field
           label="Nombres"
           value={nombres}
-          onChange={setNombres}
+          onChange={(value) => setNombres(toUpperInput(value))}
           required
         />
         <Field
           label="Apellidos"
           value={apellidos}
-          onChange={setApellidos}
+          onChange={(value) => setApellidos(toUpperInput(value))}
           required
         />
         <SelectField
@@ -282,34 +375,41 @@ export default function AttendanceForm({ role, initialSource }: Props) {
         <Field
           label="Documento"
           value={documento}
-          onChange={setDocumento}
+          onChange={(value) => setDocumento(toUpperInput(value))}
           required
         />
         <Field
           label="Correo electronico"
           value={email}
-          onChange={setEmail}
+          onChange={(value) => setEmail(toUpperInput(value))}
           type="email"
           required
         />
         <Field
           label="Telefono"
           value={telefono}
-          onChange={setTelefono}
+          onChange={(value) => setTelefono(toUpperInput(value))}
           required
         />
         <Field
           label="Institucion o universidad"
           value={institucion}
-          onChange={setInstitucion}
+          onChange={(value) => setInstitucion(toUpperInput(value))}
           required
         />
         <Field
           label="Ciudad"
           value={ciudad}
-          onChange={setCiudad}
+          onChange={(value) => setCiudad(toUpperInput(value))}
           required
         />
+        {role === "ponente" ? (
+          <Field
+            label="Semillero"
+            value={semillero}
+            onChange={(value) => setSemillero(toUpperInput(value))}
+          />
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">

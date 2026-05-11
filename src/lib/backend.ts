@@ -28,6 +28,15 @@ export function getApiErrorMessage(
 
   const maybeObject = data as Record<string, unknown>;
 
+  if (Array.isArray(maybeObject.message)) {
+    const message = maybeObject.message
+      .map((item) => String(item ?? "").trim())
+      .filter(Boolean)
+      .join(" ");
+
+    if (message) return message;
+  }
+
   if (typeof maybeObject.message === "string" && maybeObject.message.trim()) {
     return maybeObject.message;
   }

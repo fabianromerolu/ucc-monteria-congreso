@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Escarapela — Ponente</title>
+  <style>
+    html { zoom: 3; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', -apple-system, Arial, sans-serif;
+      width: 430px; height: 694px;
+      margin: 0; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #fff;
+    }
+    .badge {
+      width: 390px; height: 650px;
+      border-radius: 22px; overflow: hidden; position: relative;
+      box-shadow: 0 0 0 2.5px rgba(245,158,11,0.70),
+                  0 0 0 5px rgba(245,158,11,0.12),
+                  0 8px 40px rgba(0,0,0,0.28);
+    }
+
+    /* ── Fondo ── */
+    .bg { position: absolute; inset: 0; z-index: 1;
+      background-image: url('../../../public/fondo-escarapela.png');
+      background-size: cover; background-position: center center; }
+    .overlay { position: absolute; inset: 0; z-index: 2;
+      background: linear-gradient(170deg,
+        rgba(10,3,28,0.50) 0%, rgba(25,7,60,0.55) 30%,
+        rgba(45,14,90,0.58) 60%, rgba(12,4,38,0.66) 100%); }
+    .dots { position: absolute; inset: 0; z-index: 3;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 15px 15px; }
+
+    /* ── Hologramas (z:5 — solo sobre el fondo, BAJO el contenido z:10) ── */
+    .holo-layer { position: absolute; inset: 0; z-index: 5;
+      width: 100%; height: 100%; pointer-events: none;
+      animation: holoShift 10s linear infinite; }
+    @keyframes holoShift {
+      0%   { filter: hue-rotate(0deg)   saturate(1.9) brightness(1.12); }
+      100% { filter: hue-rotate(360deg) saturate(1.9) brightness(1.12); } }
+
+    /* ── Anillos ── */
+    .ring { position: absolute; border-radius: 50%; z-index: 4; pointer-events: none; }
+    .r1 { width: 300px; height: 300px; top:-118px; right:-98px; border: 1px solid rgba(245,158,11,0.20); }
+    .r2 { width: 200px; height: 200px; top: -70px; right:-52px; border: 1px solid rgba(245,158,11,0.16); }
+    .r3 { width: 125px; height: 125px; top: -24px; right: -7px; border: 1px solid rgba(245,158,11,0.12); }
+    .r4 { width: 220px; height: 220px; bottom:100px; left:-88px; border: 1px solid rgba(245,158,11,0.08); }
+
+    /* ── Corchetes ── */
+    .corner { position: absolute; width: 20px; height: 20px; z-index: 15; }
+    .tl { top:14px; left:14px;    border-top:2.5px solid rgba(245,158,11,0.8); border-left:2.5px solid rgba(245,158,11,0.8); }
+    .tr { top:14px; right:14px;   border-top:2.5px solid rgba(245,158,11,0.8); border-right:2.5px solid rgba(245,158,11,0.8); }
+    .bl { bottom:14px; left:14px;  border-bottom:2.5px solid rgba(245,158,11,0.8); border-left:2.5px solid rgba(245,158,11,0.8); }
+    .br { bottom:14px; right:14px; border-bottom:2.5px solid rgba(245,158,11,0.8); border-right:2.5px solid rgba(245,158,11,0.8); }
+
+    .content { position: relative; z-index: 10; height: 100%; display: flex; flex-direction: column; }
+
+    /* ── Header — logos más grandes con color holográfico ── */
+    .header { padding: 20px 22px 18px;
+      display: flex; align-items: center; justify-content: center; gap: 18px;
+      background: rgba(255,255,255,0.11); backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.16); }
+
+    /* Logos con animación de color holográfico: dorado → cian → violeta → dorado */
+    .logo-ucc { height: 46px;
+      filter: brightness(0) invert(1) sepia(1) saturate(6) hue-rotate(0deg);
+      animation: holoLogo 10s linear infinite; }
+    .logo-red  { height: 66px;
+      filter: brightness(0) invert(1) sepia(1) saturate(6) hue-rotate(0deg);
+      animation: holoLogo 10s linear infinite; }
+    @keyframes holoLogo {
+      0%   { filter: brightness(0) invert(1) sepia(1) saturate(6) hue-rotate(0deg); }
+      100% { filter: brightness(0) invert(1) sepia(1) saturate(6) hue-rotate(360deg); } }
+    .logo-sep { width: 1px; height: 58px; background: rgba(255,255,255,0.28); flex-shrink: 0; }
+
+    .accent-line { height: 3.5px;
+      background: linear-gradient(90deg, transparent, #f59e0b 18%, #fde68a 50%, #f59e0b 82%, transparent); }
+
+    /* ── Contenido desplazado hacia abajo ── */
+    .main { flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-start;
+      padding: 18px 24px 10px; text-align: center; }
+
+    .eyebrow { font-size: 7.5px; letter-spacing: 0.24em; text-transform: uppercase;
+      color: rgba(255,255,255,0.75); font-weight: 700; margin-bottom: 10px;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.9); }
+    .event-name { font-size: 15px; font-weight: 800; color: #fff;
+      line-height: 1.42; margin-bottom: 8px;
+      text-shadow: 0 2px 14px rgba(0,0,0,0.95); letter-spacing: 0.01em; }
+    .event-date { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: rgba(255,255,255,0.65); margin-bottom: 14px;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.9); }
+
+    .sep { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; width: 100%; }
+    .sep-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(245,158,11,0.65)); }
+    .sep-line:last-child { background: linear-gradient(270deg, transparent, rgba(245,158,11,0.65)); }
+    .sep-diamond { width: 8px; height: 8px; background: #f59e0b; transform: rotate(45deg);
+      box-shadow: 0 0 12px rgba(245,158,11,0.9); }
+
+    /* ── Campos blancos ── */
+    .field { margin-bottom: 14px; width: 100%; text-align: left; }
+    .field-label { font-size: 7px; letter-spacing: 0.28em; text-transform: uppercase;
+      color: rgba(255,255,255,0.68); font-weight: 700; margin-bottom: 4px;
+      display: block; text-shadow: 0 1px 5px rgba(0,0,0,0.9); }
+    .field-box { width: 100%; border-radius: 7px; background: rgba(255,255,255,0.93);
+      border: 2px solid rgba(245,158,11,0.75); position: relative; overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25), inset 0 1px 3px rgba(0,0,0,0.06); }
+    .field-box.lg { height: 40px; }
+    .field-box.sm { height: 32px; }
+    .field-box.md { height: 36px; }
+    .field-box::after { content: ''; position: absolute; left: 12px; right: 12px; height: 1px; background: rgba(0,0,0,0.11); }
+    .field-box.lg::after { bottom: 10px; }
+    .field-box.sm::after { bottom: 8px; }
+    .field-box.md::after { bottom: 9px; }
+
+    /* ── Banda rol ── */
+    .role { padding: 16px 24px; text-align: center; position: relative; overflow: hidden;
+      background: linear-gradient(135deg, #92400e 0%, #b45309 22%, #d97706 42%, #f59e0b 52%, #d97706 72%, #b45309 100%); }
+    .role::before { content: ''; position: absolute; inset: 0;
+      background: repeating-linear-gradient(-52deg, transparent, transparent 4px, rgba(255,255,255,0.055) 4px, rgba(255,255,255,0.055) 8px); }
+    .role-blob-l { position: absolute; width: 130px; height: 130px; border-radius: 50%;
+      background: rgba(255,255,255,0.07); top: 50%; left: -45px; transform: translateY(-50%); }
+    .role-blob-r { position: absolute; width: 110px; height: 110px; border-radius: 50%;
+      background: rgba(255,255,255,0.06); top: 50%; right: -35px; transform: translateY(-50%); }
+    .role-text { font-size: 24px; font-weight: 900; letter-spacing: 0.42em; text-transform: uppercase;
+      color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.35); position: relative; z-index: 2; }
+
+    .footer { padding: 7px 16px; text-align: center;
+      background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
+      border-top: 1px solid rgba(255,255,255,0.08); }
+    .footer-text { font-size: 7px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.38); }
+  </style>
+</head>
+<body>
+<div class="badge">
+    <div class="bg"></div><div class="overlay"></div><div class="dots"></div>
+    <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="ring r4"></div>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- HOLOGRAMAS — solo sobre el fondo, z:5, BAJO el contenido  -->
+    <!-- Elementos restringidos a: x<58px, x>332px  (bordes)       -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <svg class="holo-layer" viewBox="0 0 390 680" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+      <defs>
+        <linearGradient id="gb" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stop-color="#ffd700"/>
+          <stop offset="33%"  stop-color="#00e5cc"/>
+          <stop offset="66%"  stop-color="#a855f7"/>
+          <stop offset="100%" stop-color="#ffd700"/>
+        </linearGradient>
+        <linearGradient id="gl" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stop-color="#4ade80"/>
+          <stop offset="50%"  stop-color="#22d3ee"/>
+          <stop offset="100%" stop-color="#a78bfa"/>
+        </linearGradient>
+        <linearGradient id="gf" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stop-color="#f472b6"/>
+          <stop offset="50%"  stop-color="#fbbf24"/>
+          <stop offset="100%" stop-color="#818cf8"/>
+        </linearGradient>
+      </defs>
+
+      <!-- ── ESQUINA SUPERIOR IZQUIERDA ── -->
+      <path d="M30,26 C23,17 14,15 9,20 C14,24 22,24 30,26 C37,17 46,15 51,20 C46,24 38,24 30,26Z" fill="url(#gb)" opacity="0.30"/>
+      <path d="M16,42 C12,34 5,32 2,36 C5,40 11,40 16,42 C20,34 27,32 30,36 C27,40 21,40 16,42Z" fill="url(#gb)" opacity="0.24"/>
+      <path d="M44,54 C41,47 35,45 32,49 C35,52 40,52 44,54 C47,47 53,45 56,49 C53,52 48,52 44,54Z" fill="url(#gb)" opacity="0.20"/>
+      <path d="M8,18 C11,12 16,10 20,12 C16,15 11,17 8,18Z" fill="url(#gb)" opacity="0.18" transform="rotate(-20 14 14)"/>
+      <!-- Hojas esq sup izq -->
+      <ellipse cx="20" cy="74" rx="6" ry="15" fill="url(#gl)" opacity="0.24" transform="rotate(-42 20 74)"/>
+      <ellipse cx="8"  cy="96" rx="5" ry="12" fill="url(#gl)" opacity="0.20" transform="rotate(-62 8 96)"/>
+      <ellipse cx="34" cy="82" rx="4" ry="10" fill="url(#gl)" opacity="0.18" transform="rotate(-22 34 82)"/>
+      <ellipse cx="14" cy="115" rx="4" ry="9"  fill="url(#gl)" opacity="0.16" transform="rotate(-50 14 115)"/>
+      <!-- Flor esq sup izq -->
+      <g transform="translate(53,38)" opacity="0.26">
+        <ellipse rx="2.4" ry="6" transform="rotate(0)"   fill="url(#gf)"/>
+        <ellipse rx="2.4" ry="6" transform="rotate(60)"  fill="url(#gf)"/>
+        <ellipse rx="2.4" ry="6" transform="rotate(120)" fill="url(#gf)"/>
+        <ellipse rx="2.4" ry="6" transform="rotate(180)" fill="url(#gf)"/>
+        <ellipse rx="2.4" ry="6" transform="rotate(240)" fill="url(#gf)"/>
+        <ellipse rx="2.4" ry="6" transform="rotate(300)" fill="url(#gf)"/>
+        <circle r="3.2" fill="url(#gf)"/>
+      </g>
+      <!-- Flor pequeña esq sup izq -->
+      <g transform="translate(10,56)" opacity="0.20">
+        <ellipse rx="1.8" ry="4.5" transform="rotate(0)"   fill="url(#gf)"/>
+        <ellipse rx="1.8" ry="4.5" transform="rotate(72)"  fill="url(#gf)"/>
+        <ellipse rx="1.8" ry="4.5" transform="rotate(144)" fill="url(#gf)"/>
+        <ellipse rx="1.8" ry="4.5" transform="rotate(216)" fill="url(#gf)"/>
+        <ellipse rx="1.8" ry="4.5" transform="rotate(288)" fill="url(#gf)"/>
+        <circle r="2.4" fill="url(#gf)"/>
+      </g>
+      <!-- Bayas -->
+      <circle cx="32" cy="106" r="3.2" fill="url(#gf)" opacity="0.24"/>
+      <circle cx="20" cy="113" r="2.4" fill="url(#gf)" opacity="0.20"/>
+      <circle cx="8"  cy="108" r="1.8" fill="url(#gf)" opacity="0.16"/>
+
+      <!-- ── ESQUINA SUPERIOR DERECHA ── -->
+      <path d="M360,26 C353,17 344,15 339,20 C344,24 352,24 360,26 C367,17 376,15 381,20 C376,24 368,24 360,26Z" fill="url(#gb)" opacity="0.30"/>
+      <path d="M374,42 C370,34 363,32 360,36 C363,40 369,40 374,42 C378,34 385,32 388,36 C385,40 379,40 374,42Z" fill="url(#gb)" opacity="0.24"/>
+      <path d="M346,54 C343,47 337,45 334,49 C337,52 342,52 346,54 C349,47 355,45 358,49 C355,52 350,52 346,54Z" fill="url(#gb)" opacity="0.20"/>
+      <path d="M382,18 C379,12 374,10 370,12 C374,15 379,17 382,18Z" fill="url(#gb)" opacity="0.18" transform="rotate(20 376 14)"/>
+      <!-- Hojas esq sup der -->
+      <ellipse cx="370" cy="74" rx="6" ry="15" fill="url(#gl)" opacity="0.24" transform="rotate(42 370 74)"/>
+      <ellipse cx="382" cy="96" rx="5" ry="12" fill="url(#gl)" opacity="0.20" transform="rotate(62 382 96)"/>
+      <ellipse cx="356" cy="82" rx="4" ry="10" fill="url(#gl)" opacity="0.18" transform="rotate(22 356 82)"/>
+      <ellipse cx="376" cy="115" rx="4" ry="9"  fill="url(#gl)" opacity="0.16" transform="rotate(50 376 115)"/>
+      <!-- Flor esq sup der -->
+      <g transform="translate(337,38)" opacity="0.26">
+        <ellipse rx="2.4" ry="6" transform="rotate(0)"   fill="url(#gf)"/>
+        <ellipse rx="2.4" ry="6" transform="rotate(60)"  fill="url(#gf)"/>
+        <ellipse rx="2.4" ry="6" transform="rotate(120)" fill="url(#gf)"/>
+        <ellipse rx="2.4" ry="6" transform="rotate(180)" fill="url(#gf)"/>
+        <ellipse rx="2.4" ry="6" transform="rotate(240)" fill="url(#gf)"/>
+        <ellipse rx="2.4" ry="6" transform="rotate(300)" fill="url(#gf)"/>
+        <circle r="3.2" fill="url(#gf)"/>
+      </g>
+      <g transform="translate(380,56)" opacity="0.20">
+        <ellipse rx="1.8" ry="4.5" transform="rotate(0)"   fill="url(#gf)"/>
+        <ellipse rx="1.8" ry="4.5" transform="rotate(72)"  fill="url(#gf)"/>
+        <ellipse rx="1.8" ry="4.5" transform="rotate(144)" fill="url(#gf)"/>
+        <ellipse rx="1.8" ry="4.5" transform="rotate(216)" fill="url(#gf)"/>
+        <ellipse rx="1.8" ry="4.5" transform="rotate(288)" fill="url(#gf)"/>
+        <circle r="2.4" fill="url(#gf)"/>
+      </g>
+      <circle cx="358" cy="106" r="3.2" fill="url(#gf)" opacity="0.24"/>
+      <circle cx="370" cy="113" r="2.4" fill="url(#gf)" opacity="0.20"/>
+      <circle cx="382" cy="108" r="1.8" fill="url(#gf)" opacity="0.16"/>
+
+      <!-- ── BORDE IZQUIERDO (x<55) — hojas, pájaros, flores ── -->
+      <ellipse cx="14" cy="148" rx="5" ry="13" fill="url(#gl)" opacity="0.20" transform="rotate(-56 14 148)"/>
+      <ellipse cx="8"  cy="188" rx="4" ry="11" fill="url(#gl)" opacity="0.17" transform="rotate(-38 8 188)"/>
+      <path d="M24,224 C19,216 12,214 8,218 C12,221 18,221 24,224 C29,216 36,214 40,218 C36,221 30,221 24,224Z" fill="url(#gb)" opacity="0.20" transform="rotate(-14 24 219)"/>
+      <ellipse cx="12" cy="262" rx="5" ry="12" fill="url(#gl)" opacity="0.17" transform="rotate(-64 12 262)"/>
+      <ellipse cx="6"  cy="300" rx="4" ry="10" fill="url(#gl)" opacity="0.15" transform="rotate(-38 6 300)"/>
+      <g transform="translate(18,336)" opacity="0.18">
+        <ellipse rx="2" ry="5" transform="rotate(0)"   fill="url(#gf)"/>
+        <ellipse rx="2" ry="5" transform="rotate(72)"  fill="url(#gf)"/>
+        <ellipse rx="2" ry="5" transform="rotate(144)" fill="url(#gf)"/>
+        <ellipse rx="2" ry="5" transform="rotate(216)" fill="url(#gf)"/>
+        <ellipse rx="2" ry="5" transform="rotate(288)" fill="url(#gf)"/>
+        <circle r="2.6" fill="url(#gf)"/>
+      </g>
+      <ellipse cx="10" cy="374" rx="5" ry="12" fill="url(#gl)" opacity="0.16" transform="rotate(-52 10 374)"/>
+      <path d="M28,412 C23,405 16,403 12,407 C16,410 22,410 28,412 C33,405 40,403 44,407 C40,410 34,410 28,412Z" fill="url(#gb)" opacity="0.18" transform="rotate(10 28 407)"/>
+      <ellipse cx="14" cy="448" rx="4" ry="10" fill="url(#gl)" opacity="0.15" transform="rotate(-45 14 448)"/>
+      <circle  cx="22" cy="484" r="2.8" fill="url(#gf)" opacity="0.18"/>
+
+      <!-- ── BORDE DERECHO (x>332) — espejo ── -->
+      <ellipse cx="376" cy="148" rx="5" ry="13" fill="url(#gl)" opacity="0.20" transform="rotate(56 376 148)"/>
+      <ellipse cx="382" cy="188" rx="4" ry="11" fill="url(#gl)" opacity="0.17" transform="rotate(38 382 188)"/>
+      <path d="M366,224 C361,216 354,214 350,218 C354,221 360,221 366,224 C371,216 378,214 382,218 C378,221 372,221 366,224Z" fill="url(#gb)" opacity="0.20" transform="rotate(14 366 219)"/>
+      <ellipse cx="378" cy="262" rx="5" ry="12" fill="url(#gl)" opacity="0.17" transform="rotate(64 378 262)"/>
+      <ellipse cx="384" cy="300" rx="4" ry="10" fill="url(#gl)" opacity="0.15" transform="rotate(38 384 300)"/>
+      <g transform="translate(372,336)" opacity="0.18">
+        <ellipse rx="2" ry="5" transform="rotate(0)"   fill="url(#gf)"/>
+        <ellipse rx="2" ry="5" transform="rotate(72)"  fill="url(#gf)"/>
+        <ellipse rx="2" ry="5" transform="rotate(144)" fill="url(#gf)"/>
+        <ellipse rx="2" ry="5" transform="rotate(216)" fill="url(#gf)"/>
+        <ellipse rx="2" ry="5" transform="rotate(288)" fill="url(#gf)"/>
+        <circle r="2.6" fill="url(#gf)"/>
+      </g>
+      <ellipse cx="380" cy="374" rx="5" ry="12" fill="url(#gl)" opacity="0.16" transform="rotate(52 380 374)"/>
+      <path d="M362,412 C357,405 350,403 346,407 C350,410 356,410 362,412 C367,405 374,403 378,407 C374,410 368,410 362,412Z" fill="url(#gb)" opacity="0.18" transform="rotate(-10 362 407)"/>
+      <ellipse cx="376" cy="448" rx="4" ry="10" fill="url(#gl)" opacity="0.15" transform="rotate(45 376 448)"/>
+      <circle  cx="368" cy="484" r="2.8" fill="url(#gf)" opacity="0.18"/>
+
+      <!-- ── ESQUINA INFERIOR IZQUIERDA ── -->
+      <ellipse cx="18" cy="508" rx="6" ry="14" fill="url(#gl)" opacity="0.22" transform="rotate(-40 18 508)"/>
+      <ellipse cx="8"  cy="534" rx="5" ry="11" fill="url(#gl)" opacity="0.18" transform="rotate(-60 8 534)"/>
+      <path d="M40,560 C35,552 28,550 24,554 C28,557 34,557 40,560 C45,552 52,550 56,554 C52,557 46,557 40,560Z" fill="url(#gb)" opacity="0.22" transform="rotate(8 40 555)"/>
+      <g transform="translate(16,582)" opacity="0.20">
+        <ellipse rx="2.2" ry="5.5" transform="rotate(0)"   fill="url(#gf)"/>
+        <ellipse rx="2.2" ry="5.5" transform="rotate(72)"  fill="url(#gf)"/>
+        <ellipse rx="2.2" ry="5.5" transform="rotate(144)" fill="url(#gf)"/>
+        <ellipse rx="2.2" ry="5.5" transform="rotate(216)" fill="url(#gf)"/>
+        <ellipse rx="2.2" ry="5.5" transform="rotate(288)" fill="url(#gf)"/>
+        <circle r="2.8" fill="url(#gf)"/>
+      </g>
+      <circle cx="30" cy="600" r="3"   fill="url(#gf)" opacity="0.20"/>
+      <circle cx="14" cy="608" r="2.2" fill="url(#gf)" opacity="0.16"/>
+      <ellipse cx="10" cy="628" rx="4" ry="9" fill="url(#gl)" opacity="0.15" transform="rotate(-50 10 628)"/>
+
+      <!-- ── ESQUINA INFERIOR DERECHA ── -->
+      <ellipse cx="372" cy="508" rx="6" ry="14" fill="url(#gl)" opacity="0.22" transform="rotate(40 372 508)"/>
+      <ellipse cx="382" cy="534" rx="5" ry="11" fill="url(#gl)" opacity="0.18" transform="rotate(60 382 534)"/>
+      <path d="M350,560 C345,552 338,550 334,554 C338,557 344,557 350,560 C355,552 362,550 366,554 C362,557 356,557 350,560Z" fill="url(#gb)" opacity="0.22" transform="rotate(-8 350 555)"/>
+      <g transform="translate(374,582)" opacity="0.20">
+        <ellipse rx="2.2" ry="5.5" transform="rotate(0)"   fill="url(#gf)"/>
+        <ellipse rx="2.2" ry="5.5" transform="rotate(72)"  fill="url(#gf)"/>
+        <ellipse rx="2.2" ry="5.5" transform="rotate(144)" fill="url(#gf)"/>
+        <ellipse rx="2.2" ry="5.5" transform="rotate(216)" fill="url(#gf)"/>
+        <ellipse rx="2.2" ry="5.5" transform="rotate(288)" fill="url(#gf)"/>
+        <circle r="2.8" fill="url(#gf)"/>
+      </g>
+      <circle cx="360" cy="600" r="3"   fill="url(#gf)" opacity="0.20"/>
+      <circle cx="376" cy="608" r="2.2" fill="url(#gf)" opacity="0.16"/>
+      <ellipse cx="380" cy="628" rx="4" ry="9" fill="url(#gl)" opacity="0.15" transform="rotate(50 380 628)"/>
+    </svg>
+    <!-- ══════════════════════════════════════════════════════════ -->
+
+    <div class="corner tl"></div><div class="corner tr"></div>
+    <div class="corner bl"></div><div class="corner br"></div>
+
+    <div class="content">
+      <div class="header">
+        <img class="logo-ucc" src="../../../public/icono-ucc.png" alt="UCC" />
+        <div class="logo-sep"></div>
+        <img class="logo-red" src="../../../public/logo-red.png" alt="RED Investigación Jurídica" />
+      </div>
+      <div class="accent-line"></div>
+      <div class="main">
+        <div class="eyebrow">Universidad Cooperativa de Colombia</div>
+        <div class="event-name">XX Encuentro del Nodo Caribe<br/>de la Red de Investigación<br/>Jurídica y Sociojurídica</div>
+        <div class="event-date">Montería, Córdoba &nbsp;·&nbsp; 14 y 15 de mayo de 2026</div>
+        <div class="sep"><div class="sep-line"></div><div class="sep-diamond"></div><div class="sep-line"></div></div>
+        <div class="field"><span class="field-label">Nombre completo</span><div class="field-box lg"></div></div>
+        <div class="field"><span class="field-label">Documento de identidad</span><div class="field-box sm"></div></div>
+        <div class="field"><span class="field-label">Universidad / Institución</span><div class="field-box md"></div></div>
+      </div>
+      <div class="role">
+        <div class="role-blob-l"></div><div class="role-blob-r"></div>
+        <div class="role-text">Ponente</div>
+      </div>
+      <div class="footer"><div class="footer-text">Nodo Caribe &nbsp;·&nbsp; Campus Montería</div></div>
+    </div>
+</div>
+</body>
+</html>
