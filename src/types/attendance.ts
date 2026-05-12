@@ -32,6 +32,16 @@ export type AttendanceInput = {
   source: AttendanceSource;
 };
 
+export type AttendanceManualInput = AttendanceInput & {
+  universidad?: string;
+  programa?: string;
+  semestre?: string;
+  profesion?: string;
+  posgrado?: string;
+  universidadPosgrado?: string;
+  tituloPonencia?: string;
+};
+
 export type AttendanceRecord = {
   id: string;
   role: AttendanceRole;
@@ -83,6 +93,13 @@ export type AttendanceCertificateDispatchResponse = {
   generatedRecords?: AttendanceCertificateDispatchRecord[];
   failedRecords?: AttendanceCertificateDispatchRecord[];
   existingErrorRecords?: AttendanceCertificateDispatchRecord[];
+};
+
+export type AttendanceCertificateCleanupResponse = {
+  message?: string;
+  deleted: number;
+  reset: number;
+  affected: number;
 };
 
 export type AttendanceCertificateDispatchRecord = {

@@ -295,13 +295,98 @@ body::after {
 .panel-modal-card {
   background: rgba(255,255,255,0.99);
   border-color: var(--congreso-border);
+  box-shadow: 0 28px 70px rgba(31,27,36,0.22);
 }
+.panel-modal-header {
+  border-color: var(--congreso-border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,247,255,0.92));
+}
+.panel-eyebrow { color: var(--congreso-primary); }
 .panel-title       { color: var(--congreso-text); }
 .panel-close-btn   { background: rgba(0,0,0,0.06); color: var(--congreso-text); }
 .panel-input {
   border-color: var(--congreso-border);
   color: var(--congreso-text);
   background: rgba(255,255,255,0.96);
+}
+.panel-input:focus {
+  border-color: rgba(137, 0, 201, 0.45);
+  box-shadow: 0 0 0 3px rgba(165, 107, 255, 0.22);
+}
+.panel-status-pill {
+  background: rgba(180,35,24,0.10);
+  color: #8a1f16;
+}
+.panel-status-pill[data-enabled="true"] {
+  background: rgba(18,112,63,0.12);
+  color: #12703f;
+}
+.panel-section {
+  background: rgba(255,255,255,0.74);
+  border-color: var(--congreso-border);
+}
+.panel-section-icon {
+  background: rgba(119,7,172,0.10);
+  color: var(--congreso-primary);
+}
+.panel-stat,
+.panel-role-stat {
+  background: rgba(255,255,255,0.86);
+  border-color: var(--congreso-border);
+  color: var(--congreso-text);
+}
+.panel-stat p:first-child {
+  color: rgba(31,27,36,0.58);
+}
+.panel-stat[data-tone="success"] {
+  background: rgba(18,112,63,0.08);
+  border-color: rgba(18,112,63,0.18);
+  color: #12703f;
+}
+.panel-stat[data-tone="warning"] {
+  background: rgba(181,71,8,0.08);
+  border-color: rgba(181,71,8,0.18);
+  color: #b54708;
+}
+.panel-stat[data-tone="danger"] {
+  background: rgba(180,35,24,0.08);
+  border-color: rgba(180,35,24,0.18);
+  color: #b42318;
+}
+.panel-action-btn {
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(31,27,36,0.12);
+  transition: transform .2s ease, box-shadow .2s ease, opacity .2s ease;
+}
+.panel-action-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px rgba(31,27,36,0.16);
+}
+.panel-action-btn[data-variant="primary"] { background: linear-gradient(135deg, var(--congreso-primary), #5a3fd6); }
+.panel-action-btn[data-variant="success"] { background: linear-gradient(135deg, #12703f, #1f8f55); }
+.panel-action-btn[data-variant="info"]    { background: linear-gradient(135deg, #1f6f8f, #155a72); }
+.panel-action-btn[data-variant="danger"]  { background: linear-gradient(135deg, #b42318, #912018); }
+.panel-action-btn[data-variant="muted"]   { background: linear-gradient(135deg, #6f6f76, #4d4d55); }
+.panel-small-btn {
+  background: rgba(31,27,36,0.07);
+  color: var(--congreso-text);
+  transition: transform .2s ease, background .2s ease;
+}
+.panel-small-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: rgba(31,27,36,0.11);
+}
+.panel-small-btn[data-variant="danger"] {
+  background: rgba(180,35,24,0.10);
+  color: #b42318;
+}
+.panel-small-btn[data-variant="success"] {
+  background: rgba(18,112,63,0.12);
+  color: #12703f;
+}
+.panel-table-shell {
+  border-color: var(--congreso-border);
+  background: rgba(255,255,255,0.82);
 }
 .panel-btn-login {
   background: linear-gradient(135deg, var(--congreso-primary), #5a3fd6);

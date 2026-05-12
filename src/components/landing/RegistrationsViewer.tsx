@@ -8,7 +8,11 @@ import EvaluadoresPanelModal from "./EvaluadoresPanelModal";
 import LatePonenciaPanelModal from "./LatePonenciaPanelModal";
 import { getAdminRegistros, asignarEvaluadoresTardias } from "@/src/services/admin.service";
 import {
+  clearGeneratedAttendanceCertificates,
+  createAdminAttendanceRecord,
+  deleteGeneratedAttendanceCertificate,
   getAdminAttendanceSnapshot,
+  regenerateAttendanceCertificate,
   sendAttendanceCertificates,
   updateAttendancePublicConfig,
 } from "@/src/services/attendance.service";
@@ -26,6 +30,7 @@ import {
   type AttendanceAdminSummary,
   type AttendanceCertificateDispatchRecord,
   type AttendanceCertificateDispatchResponse,
+  type AttendanceManualInput,
   type AttendanceRecord,
 } from "@/src/types/attendance";
 
@@ -1329,6 +1334,10 @@ export default function RegistrationsViewer({
     React.useState<AttendanceAdminSummary | null>(null);
   const [togglingAttendance, setTogglingAttendance] = React.useState(false);
   const [sendingCertificates, setSendingCertificates] = React.useState(false);
+  const [deletingCertificates, setDeletingCertificates] = React.useState(false);
+  const [creatingManualAttendance, setCreatingManualAttendance] = React.useState(false);
+  const [regeneratingCertificateId, setRegeneratingCertificateId] =
+    React.useState<string | null>(null);
   const [certificateResult, setCertificateResult] =
     React.useState<AttendanceCertificateDispatchResponse | null>(null);
   const [assigningTardias, setAssigningTardias] = React.useState(false);
@@ -1529,7 +1538,7 @@ export default function RegistrationsViewer({
       } else {
         toast.success(
           result.message ??
-            `Proceso finalizado. Generados: ${result.generated ?? result.sent}. Fallidos: ${result.failed}.`,
+            `Proceso finalizado. Generados y enviados: ${result.generated ?? result.sent}. Fallidos: ${result.failed}.`,
         );
       }
       await loadAttendanceAdminData();
@@ -1550,6 +1559,103 @@ export default function RegistrationsViewer({
       });
     } finally {
       setSendingCertificates(false);
+    }
+  }
+
+  async function handleDeleteGeneratedCertificates() {
+    if (!adminCode) {
+      const message =
+        "No se encontro NEXT_PUBLIC_ADMIN_PANEL_CODE ni NEXT_PUBLIC_EVALUADORES_PANEL_CODE.";
+      toast.error(message);
+      throw new Error(message);
+    }
+
+    try {
+      setDeletingCertificates(true);
+      const result = await clearGeneratedAttendanceCertificates(adminCode);
+      const affected = result.affected || result.deleted || result.reset;
+      toast.success(
+        result.message ??
+          `Certificados borrados. Registros actualizados: ${affected}.`,
+      );
+      await loadAttendanceAdminData();
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudieron borrar los certificados generados.";
+      toast.error(message);
+      throw new Error(message);
+    } finally {
+      setDeletingCertificates(false);
+    }
+  }
+
+  async function handleCreateManualAttendance(input: AttendanceManualInput) {
+    if (!adminCode) {
+      const message =
+        "No se encontro NEXT_PUBLIC_ADMIN_PANEL_CODE ni NEXT_PUBLIC_EVALUADORES_PANEL_CODE.";
+      toast.error(message);
+      throw new Error(message);
+    }
+
+    try {
+      setCreatingManualAttendance(true);
+      await createAdminAttendanceRecord(input, adminCode);
+      toast.success("Asistencia manual registrada correctamente.");
+      setActiveTab("asistencias");
+      await loadAttendanceAdminData();
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo registrar la asistencia manual.";
+      toast.error(message);
+      throw new Error(message);
+    } finally {
+      setCreatingManualAttendance(false);
+    }
+  }
+
+  async function handleDeleteAndRegenerateCertificate(record: AttendanceRecord) {
+    if (!adminCode) {
+      const message =
+        "No se encontro NEXT_PUBLIC_ADMIN_PANEL_CODE ni NEXT_PUBLIC_EVALUADORES_PANEL_CODE.";
+      toast.error(message);
+      throw new Error(message);
+    }
+
+    try {
+      setRegeneratingCertificateId(record.id);
+      await deleteGeneratedAttendanceCertificate(record, adminCode);
+      const result = await regenerateAttendanceCertificate(record, adminCode);
+      setCertificateResult(result);
+
+      if (result.failed > 0 || (result.existingErrorRecords?.length ?? 0) > 0) {
+        toast.error(
+          result.message ??
+            "El certificado se borro, pero hubo novedades al regenerarlo.",
+        );
+      } else {
+        toast.success(
+          result.message ??
+            "Certificado regenerado y enviado al correo registrado.",
+        );
+      }
+
+      await loadAttendanceAdminData();
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo borrar y regenerar el certificado seleccionado.";
+      toast.error(message);
+      throw new Error(message);
+    } finally {
+      setRegeneratingCertificateId(null);
     }
   }
 
@@ -1854,9 +1960,17 @@ export default function RegistrationsViewer({
         attendanceLoading={attendanceLoading}
         togglingAttendance={togglingAttendance}
         generatingCertificates={sendingCertificates}
+        deletingCertificates={deletingCertificates}
+        creatingManualAttendance={creatingManualAttendance}
         assigningTardias={assigningTardias}
+        attendanceSummary={attendanceSummary}
+        attendanceRecords={attendanceRecords}
+        regeneratingCertificateId={regeneratingCertificateId}
         onToggleAttendance={handleToggleAttendance}
         onGenerateCertificates={handleSendCertificates}
+        onDeleteGeneratedCertificates={handleDeleteGeneratedCertificates}
+        onCreateManualAttendance={handleCreateManualAttendance}
+        onDeleteAndRegenerateCertificate={handleDeleteAndRegenerateCertificate}
         onAsignarEvaluadoresTardias={handleAsignarEvaluadoresTardias}
         onOpenLatePonenciaForm={() => {
           setPanelOpen(false);

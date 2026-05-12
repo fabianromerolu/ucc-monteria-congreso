@@ -6,9 +6,11 @@ import {
 } from "@/src/lib/backend";
 import type {
   AttendanceAdminResponse,
+  AttendanceCertificateCleanupResponse,
   AttendanceCertificateDispatchResponse,
   AttendanceCertificateLookupResponse,
   AttendanceInput,
+  AttendanceManualInput,
   AttendancePublicConfig,
   AttendanceRecord,
 } from "@/src/types/attendance";
@@ -47,10 +49,27 @@ type AttendanceDispatchApiResponse = {
   registrosConError?: AttendanceCertificateDispatchResponse["existingErrorRecords"];
 };
 
+type AttendanceCleanupApiResponse = {
+  message?: string;
+  deleted?: number;
+  eliminados?: number;
+  reset?: number;
+  reiniciados?: number;
+  affected?: number;
+  afectados?: number;
+};
+
 type AttendanceCertificateLookupApiResponse = AttendanceCertificateLookupResponse & {
   estado?: AttendanceCertificateLookupResponse["status"];
   mensaje?: string;
   certificados?: AttendanceCertificateLookupResponse["certificates"];
+};
+
+type AttendanceCreateApiResponse = {
+  record?: AttendanceRecord;
+  registro?: AttendanceRecord;
+  data?: AttendanceRecord;
+  asistencia?: AttendanceRecord;
 };
 
 function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
@@ -197,6 +216,10 @@ export async function sendAttendanceCertificates(
       body: JSON.stringify({
         pendingOnly: true,
         retryErrors: true,
+        sendEmail: true,
+        sendEmails: true,
+        emailCertificates: true,
+        notifyRecipients: true,
       }),
     },
   );
@@ -220,6 +243,266 @@ export async function sendAttendanceCertificates(
     failedRecords: data.failedRecords ?? data.registrosFallidos ?? [],
     existingErrorRecords: data.existingErrorRecords ?? data.registrosConError ?? [],
   };
+}
+
+async function requestCleanupGeneratedCertificates(
+  path: string,
+  method: "DELETE" | "POST",
+  adminCode: string,
+  body?: Record<string, unknown>,
+) {
+  const baseUrl = getBackendBaseUrl();
+  const response = await fetch(`${baseUrl}${path}`, {
+    method,
+    headers: buildAdminHeaders(adminCode),
+    body: JSON.stringify({
+      generatedOnly: true,
+      onlyGenerated: true,
+      resetStatus: true,
+      ...body,
+    }),
+  });
+
+  const data = (await readJsonSafe<AttendanceCleanupApiResponse>(response)) ?? {};
+
+  return { response, data };
+}
+
+export async function clearGeneratedAttendanceCertificates(
+  adminCode: string,
+): Promise<AttendanceCertificateCleanupResponse> {
+  const candidates: Array<{ path: string; method: "DELETE" | "POST" }> = [
+    { path: "/administracion/asistencias/certificados", method: "DELETE" },
+    { path: "/administracion/asistencias/certificados/generados", method: "DELETE" },
+    { path: "/administracion/asistencias/certificados/borrar", method: "POST" },
+    { path: "/administracion/asistencias/certificados/reset", method: "POST" },
+  ];
+
+  let lastError = "No se pudieron borrar los certificados generados.";
+
+  for (const candidate of candidates) {
+    const { response, data } = await requestCleanupGeneratedCertificates(
+      candidate.path,
+      candidate.method,
+      adminCode,
+    );
+
+    if (response.ok) {
+      const deleted = Number(data.deleted ?? data.eliminados ?? 0);
+      const reset = Number(data.reset ?? data.reiniciados ?? 0);
+      const affected = Number(data.affected ?? data.afectados ?? Math.max(deleted, reset));
+
+      return {
+        message: data.message,
+        deleted,
+        reset,
+        affected,
+      };
+    }
+
+    lastError = getApiErrorMessage(data, lastError);
+
+    if (response.status !== 404 && response.status !== 405) {
+      break;
+    }
+  }
+
+  throw new Error(lastError);
+}
+
+export async function deleteGeneratedAttendanceCertificate(
+  record: AttendanceRecord,
+  adminCode: string,
+): Promise<AttendanceCertificateCleanupResponse> {
+  const candidates: Array<{ path: string; method: "DELETE" | "POST" }> = [
+    { path: `/administracion/asistencias/certificados/${record.id}`, method: "DELETE" },
+    { path: `/administracion/asistencias/${record.id}/certificado`, method: "DELETE" },
+    { path: `/administracion/asistencias/certificados/${record.id}/borrar`, method: "POST" },
+    { path: `/administracion/asistencias/${record.id}/certificado/borrar`, method: "POST" },
+  ];
+  const body = {
+    id: record.id,
+    attendanceId: record.id,
+    recordId: record.id,
+    registroId: record.id,
+    documento: record.documento,
+    role: record.role,
+  };
+  let lastError = "No se pudo borrar el certificado seleccionado.";
+
+  for (const candidate of candidates) {
+    const { response, data } = await requestCleanupGeneratedCertificates(
+      candidate.path,
+      candidate.method,
+      adminCode,
+      body,
+    );
+
+    if (response.ok) {
+      const deleted = Number(data.deleted ?? data.eliminados ?? 0);
+      const reset = Number(data.reset ?? data.reiniciados ?? 0);
+      const affected = Number(data.affected ?? data.afectados ?? Math.max(deleted, reset, 1));
+
+      return {
+        message: data.message,
+        deleted,
+        reset,
+        affected,
+      };
+    }
+
+    lastError = getApiErrorMessage(data, lastError);
+
+    if (response.status !== 404 && response.status !== 405) {
+      break;
+    }
+  }
+
+  throw new Error(lastError);
+}
+
+async function requestRegenerateCertificate(
+  path: string,
+  adminCode: string,
+  record: AttendanceRecord,
+) {
+  const baseUrl = getBackendBaseUrl();
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: "POST",
+    headers: buildAdminHeaders(adminCode),
+    body: JSON.stringify({
+      id: record.id,
+      attendanceId: record.id,
+      recordId: record.id,
+      registroId: record.id,
+      attendanceIds: [record.id],
+      recordIds: [record.id],
+      ids: [record.id],
+      documento: record.documento,
+      role: record.role,
+      pendingOnly: false,
+      force: true,
+      retryErrors: true,
+      sendEmail: true,
+      sendEmails: true,
+      emailCertificates: true,
+      notifyRecipients: true,
+    }),
+  });
+
+  const data = (await readJsonSafe<AttendanceDispatchApiResponse>(response)) ?? {};
+
+  return { response, data };
+}
+
+export async function regenerateAttendanceCertificate(
+  record: AttendanceRecord,
+  adminCode: string,
+): Promise<AttendanceCertificateDispatchResponse> {
+  const candidates = [
+    `/administracion/asistencias/certificados/${record.id}/regenerar`,
+    `/administracion/asistencias/${record.id}/certificado/regenerar`,
+  ];
+  let lastError = "No se pudo regenerar el certificado seleccionado.";
+
+  for (const path of candidates) {
+    const { response, data } = await requestRegenerateCertificate(path, adminCode, record);
+
+    if (response.ok) {
+      return {
+        message: data.message,
+        sent: Number(data.sent ?? data.enviados ?? 0),
+        generated: Number(data.generated ?? data.generados ?? data.sent ?? data.enviados ?? 0),
+        failed: Number(data.failed ?? data.fallidos ?? 0),
+        processed: Number(data.processed ?? data.procesados ?? 0),
+        retryErrors: Boolean(data.retryErrors ?? true),
+        generatedRecords: data.generatedRecords ?? data.registrosGenerados ?? [],
+        failedRecords: data.failedRecords ?? data.registrosFallidos ?? [],
+        existingErrorRecords: data.existingErrorRecords ?? data.registrosConError ?? [],
+      };
+    }
+
+    lastError = getApiErrorMessage(data, lastError);
+
+    if (response.status !== 404 && response.status !== 405) {
+      break;
+    }
+  }
+
+  throw new Error(lastError);
+}
+
+async function requestCreateAdminAttendance(
+  path: string,
+  adminCode: string,
+  data: AttendanceManualInput,
+) {
+  const baseUrl = getBackendBaseUrl();
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: "POST",
+    headers: buildAdminHeaders(adminCode),
+    body: JSON.stringify(
+      clean({
+        role: data.role,
+        nombres: data.nombres,
+        apellidos: data.apellidos,
+        tipoDocumento: data.tipoDocumento,
+        documento: data.documento,
+        email: data.email,
+        telefono: data.telefono,
+        institucion: data.institucion,
+        ciudad: data.ciudad,
+        semillero: data.semillero,
+        universidad: data.universidad,
+        programa: data.programa,
+        semestre: data.semestre,
+        profesion: data.profesion,
+        posgrado: data.posgrado,
+        universidadPosgrado: data.universidadPosgrado,
+        tituloPonencia: data.tituloPonencia,
+        source: data.source,
+      }),
+    ),
+  });
+
+  const responseData = (await readJsonSafe<AttendanceCreateApiResponse>(response)) ?? {};
+
+  return { response, data: responseData };
+}
+
+export async function createAdminAttendanceRecord(
+  data: AttendanceManualInput,
+  adminCode: string,
+): Promise<AttendanceRecord | null> {
+  const candidates = [
+    `/administracion/asistencias/${data.role}`,
+    "/administracion/asistencias",
+    `/asistencias/${data.role}`,
+  ];
+
+  let lastError = "No se pudo registrar la asistencia manual.";
+
+  for (const path of candidates) {
+    const result = await requestCreateAdminAttendance(path, adminCode, data);
+
+    if (result.response.ok) {
+      return (
+        result.data.record ??
+        result.data.registro ??
+        result.data.data ??
+        result.data.asistencia ??
+        null
+      );
+    }
+
+    lastError = getApiErrorMessage(result.data, lastError);
+
+    if (result.response.status !== 404 && result.response.status !== 405) {
+      break;
+    }
+  }
+
+  throw new Error(lastError);
 }
 
 export async function lookupAttendanceCertificate(
