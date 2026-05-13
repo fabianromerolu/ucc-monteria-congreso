@@ -51,7 +51,7 @@ export default function AttendancePublicSection({ enabled, loading = false }: Pr
             Registro de asistencias
           </p>
           <h2 className="mt-2 text-2xl font-bold tracking-tight text-white md:text-3xl">
-            Asistencias habilitadas en la landing
+            Asistencia 
           </h2>
           <p className="mt-3 max-w-3xl text-sm text-white/84 md:text-[15px]">
             Escanea el QR o usa el boton directo para abrir el formulario. Selecciona tu rol
