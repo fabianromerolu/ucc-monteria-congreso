@@ -40,6 +40,8 @@ export type AttendanceManualInput = AttendanceInput & {
   posgrado?: string;
   universidadPosgrado?: string;
   tituloPonencia?: string;
+  ponenciaIds?: string[];
+  ponenciasEvaluadas?: string[];
 };
 
 export type AttendanceRecord = {
@@ -54,6 +56,8 @@ export type AttendanceRecord = {
   institucion: string;
   ciudad: string;
   semillero?: string | null;
+  tituloPonencia?: string | null;
+  ponenciasEvaluadas?: string[] | null;
   source: AttendanceSource | string;
   createdAt: string;
   certificateStatus: CertificateStatus | string;
@@ -115,6 +119,9 @@ export type AttendanceCertificateDispatchRecord = {
   certificateError?: string | null;
   error?: string | null;
   linkedRegistrationId?: string | null;
+  emailSent?: boolean;
+  emailSkipped?: boolean;
+  emailMessage?: string | null;
 };
 
 export type AttendanceCertificateFile = {

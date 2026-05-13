@@ -63,6 +63,7 @@ type ManualAttendanceForm = {
   universidadPosgrado: string;
   tituloPonencia: string;
   semillero: string;
+  ponenciaIds: string[];
 };
 
 type CertificateLookupModal = {
@@ -70,6 +71,14 @@ type CertificateLookupModal = {
   title: string;
   message: string;
   certificates: AttendanceCertificateFile[];
+};
+
+type AvailablePonencia = {
+  id: string;
+  tituloPonencia: string;
+  documento: string;
+  nombres: string;
+  apellidos: string;
 };
 
 type Props = {
@@ -90,6 +99,7 @@ type Props = {
   assigningTardias: boolean;
   attendanceSummary: AttendanceAdminSummary | null;
   attendanceRecords: AttendanceRecord[];
+  availablePonencias: AvailablePonencia[];
   regeneratingCertificateId: string | null;
   onToggleAttendance: () => void;
   onGenerateCertificates: () => void;
@@ -122,6 +132,7 @@ function emptyManualForm(role: AttendanceRole = "ponente"): ManualAttendanceForm
     universidadPosgrado: "",
     tituloPonencia: "",
     semillero: "",
+    ponenciaIds: [],
   };
 }
 
@@ -373,6 +384,7 @@ export default function EvaluadoresPanelModal({
   assigningTardias,
   attendanceSummary,
   attendanceRecords,
+  availablePonencias,
   regeneratingCertificateId,
   onToggleAttendance,
   onGenerateCertificates,
@@ -401,6 +413,12 @@ export default function EvaluadoresPanelModal({
   const generatedRecords = attendanceRecords.filter(
     (record) => record.certificateStatus === "sent",
   );
+  const selectedManualPonencias = availablePonencias.filter((ponente) =>
+    manualForm.ponenciaIds.includes(ponente.id),
+  );
+  const selectableManualPonencias = availablePonencias.filter(
+    (ponente) => !manualForm.ponenciaIds.includes(ponente.id),
+  );
 
   function updateManualForm<K extends keyof ManualAttendanceForm>(
     key: K,
@@ -428,6 +446,20 @@ export default function EvaluadoresPanelModal({
       return;
     }
 
+    if (manualForm.role === "ponente" && !manualForm.tituloPonencia.trim()) {
+      setManualError("Indica el nombre de la ponencia presentada por el ponente.");
+      return;
+    }
+
+    if (manualForm.role === "evaluador" && !selectedManualPonencias.length) {
+      setManualError("Selecciona al menos una ponencia evaluada por el evaluador.");
+      return;
+    }
+
+    const selectedPonenciaTitles = selectedManualPonencias.map(
+      (ponente) => ponente.tituloPonencia,
+    );
+
     try {
       await onCreateManualAttendance({
         role: manualForm.role,
@@ -454,6 +486,10 @@ export default function EvaluadoresPanelModal({
             : undefined,
         tituloPonencia:
           manualForm.role === "ponente" ? manualForm.tituloPonencia : undefined,
+        ponenciaIds:
+          manualForm.role === "evaluador" ? manualForm.ponenciaIds : undefined,
+        ponenciasEvaluadas:
+          manualForm.role === "evaluador" ? selectedPonenciaTitles : undefined,
         semillero:
           manualForm.role === "ponente" ? manualForm.semillero : undefined,
         source: "direct",
@@ -966,14 +1002,15 @@ export default function EvaluadoresPanelModal({
                     />
                     <div className="md:col-span-2">
                       <PanelInput
-                        label="Titulo de ponencia"
-                        value={manualForm.tituloPonencia}
-                        onChange={(value) =>
-                          updateManualForm("tituloPonencia", toUpperInput(value))
-                        }
-                      />
-                    </div>
-                  </>
+                      label="Titulo de ponencia"
+                      value={manualForm.tituloPonencia}
+                      onChange={(value) =>
+                        updateManualForm("tituloPonencia", toUpperInput(value))
+                      }
+                      required
+                    />
+                  </div>
+                </>
                 ) : null}
 
                 {manualForm.role === "evaluador" ? (
@@ -1002,6 +1039,92 @@ export default function EvaluadoresPanelModal({
                         )
                       }
                     />
+                    <div className="md:col-span-2">
+                      <div className="grid gap-2 rounded-2xl border p-4" style={{ borderColor: "var(--congreso-border)" }}>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-bold">
+                              Ponencias evaluadas <span className="opacity-60">*</span>
+                            </p>
+                            <p className="text-xs opacity-70">
+                              Selecciona hasta 9 ponencias. Se iran mostrando abajo.
+                            </p>
+                          </div>
+                          <span className="rounded-full bg-black/5 px-3 py-1 text-xs font-bold">
+                            {selectedManualPonencias.length}/9
+                          </span>
+                        </div>
+
+                        <select
+                          value=""
+                          onChange={(event) => {
+                            const id = event.target.value;
+                            if (!id || manualForm.ponenciaIds.includes(id)) return;
+                            if (manualForm.ponenciaIds.length >= 9) {
+                              setManualError("Solo puedes seleccionar maximo 9 ponencias.");
+                              return;
+                            }
+
+                            updateManualForm("ponenciaIds", [
+                              ...manualForm.ponenciaIds,
+                              id,
+                            ]);
+                            setManualError(null);
+                          }}
+                          disabled={!selectableManualPonencias.length || manualForm.ponenciaIds.length >= 9}
+                          className="panel-input h-11 rounded-xl border px-3 text-sm font-medium outline-none disabled:opacity-60"
+                          aria-label="Agregar ponencia evaluada"
+                          title="Agregar ponencia evaluada"
+                        >
+                          <option value="">
+                            {selectableManualPonencias.length
+                              ? "Agregar ponencia evaluada"
+                              : "No hay ponencias disponibles"}
+                          </option>
+                          {selectableManualPonencias.map((ponente) => (
+                            <option key={ponente.id} value={ponente.id}>
+                              {ponente.tituloPonencia} - {ponente.nombres} {ponente.apellidos}
+                            </option>
+                          ))}
+                        </select>
+
+                        {selectedManualPonencias.length ? (
+                          <div className="grid gap-2">
+                            {selectedManualPonencias.map((ponente, index) => (
+                              <div
+                                key={ponente.id}
+                                className="flex items-start justify-between gap-3 rounded-xl bg-black/[0.04] p-3 text-sm"
+                              >
+                                <span>
+                                  <span className="font-bold">{index + 1}. {ponente.tituloPonencia}</span>
+                                  <span className="block text-xs opacity-70">
+                                    {ponente.nombres} {ponente.apellidos} - {ponente.documento}
+                                  </span>
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateManualForm(
+                                      "ponenciaIds",
+                                      manualForm.ponenciaIds.filter((id) => id !== ponente.id),
+                                    )
+                                  }
+                                  className="panel-small-btn rounded-xl px-2 py-1 text-xs font-bold"
+                                  aria-label={`Quitar ${ponente.tituloPonencia}`}
+                                  title="Quitar ponencia"
+                                >
+                                  Quitar
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="rounded-xl bg-amber-500/10 p-3 text-sm font-semibold text-amber-800">
+                            Aun no has seleccionado ponencias para este evaluador.
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </>
                 ) : null}
 

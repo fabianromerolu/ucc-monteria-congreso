@@ -1965,6 +1965,13 @@ export default function RegistrationsViewer({
         assigningTardias={assigningTardias}
         attendanceSummary={attendanceSummary}
         attendanceRecords={attendanceRecords}
+        availablePonencias={(data?.ponentes ?? []).map((ponente) => ({
+          id: ponente.id,
+          tituloPonencia: ponente.tituloPonencia,
+          documento: ponente.documento,
+          nombres: ponente.nombres,
+          apellidos: ponente.apellidos,
+        }))}
         regeneratingCertificateId={regeneratingCertificateId}
         onToggleAttendance={handleToggleAttendance}
         onGenerateCertificates={handleSendCertificates}

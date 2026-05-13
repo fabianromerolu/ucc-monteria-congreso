@@ -460,6 +460,8 @@ async function requestCreateAdminAttendance(
         posgrado: data.posgrado,
         universidadPosgrado: data.universidadPosgrado,
         tituloPonencia: data.tituloPonencia,
+        ponenciaIds: data.ponenciaIds,
+        ponenciasEvaluadas: data.ponenciasEvaluadas,
         source: data.source,
       }),
     ),
