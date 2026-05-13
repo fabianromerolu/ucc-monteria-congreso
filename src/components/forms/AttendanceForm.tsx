@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { Divider, Field, SelectField, SubmitButton } from "./_fields";
@@ -12,6 +12,7 @@ import {
 } from "@/src/services/attendance.service";
 import {
   ATTENDANCE_ROLE_META,
+  ATTENDANCE_ROLES,
   isAttendanceSource,
   type AttendanceRole,
   type AttendanceSource,
@@ -25,8 +26,14 @@ const DOCUMENT_OPTIONS: Array<{ value: TipoDocumento; label: string }> = [
   { value: "PAS", label: "Pasaporte" },
 ];
 
+const ROLE_OPTIONS: Array<{ value: AttendanceRole; label: string }> = ATTENDANCE_ROLES.map(
+  (r) => ({ value: r, label: ATTENDANCE_ROLE_META[r].label }),
+);
+
+const MAX_PONENCIAS = 10;
+
 type Props = {
-  role: AttendanceRole;
+  role?: AttendanceRole;
   initialSource?: string;
 };
 
@@ -34,7 +41,7 @@ function toUpperInput(value: string) {
   return value.toLocaleUpperCase("es-CO");
 }
 
-function AttendanceConfigLoader({ roleLabel }: { roleLabel: string }) {
+function AttendanceConfigLoader() {
   return (
     <section className="grid gap-4 form-shell">
       <div
@@ -56,8 +63,7 @@ function AttendanceConfigLoader({ roleLabel }: { roleLabel: string }) {
           <div>
             <p className="font-semibold">Preparando formulario de asistencia</p>
             <p className="mt-1 text-sm opacity-75">
-              Estamos validando si el registro para {roleLabel.toLowerCase()}s
-              se encuentra habilitado.
+              Estamos validando si el registro se encuentra habilitado.
             </p>
           </div>
         </div>
@@ -76,11 +82,8 @@ function AttendanceConfigLoader({ roleLabel }: { roleLabel: string }) {
   );
 }
 
-export default function AttendanceForm({ role, initialSource }: Props) {
-  const meta = ATTENDANCE_ROLE_META[role];
-  const source: AttendanceSource = isAttendanceSource(initialSource)
-    ? initialSource
-    : "direct";
+export default function AttendanceForm({ role: roleProp, initialSource }: Props) {
+  const source: AttendanceSource = isAttendanceSource(initialSource) ? initialSource : "direct";
 
   const [enabled, setEnabled] = React.useState(false);
   const [loadingConfig, setLoadingConfig] = React.useState(true);
@@ -88,6 +91,14 @@ export default function AttendanceForm({ role, initialSource }: Props) {
   const [submitted, setSubmitted] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
 
+  // Campo de rol (cuando no viene desde props)
+  const [selectedRole, setSelectedRole] = React.useState<AttendanceRole>(
+    roleProp ?? "asistente",
+  );
+  const role: AttendanceRole = roleProp ?? selectedRole;
+  const meta = ATTENDANCE_ROLE_META[role];
+
+  // Campos comunes
   const [nombres, setNombres] = React.useState("");
   const [apellidos, setApellidos] = React.useState("");
   const [tipoDocumento, setTipoDocumento] = React.useState<TipoDocumento>("CC");
@@ -96,7 +107,14 @@ export default function AttendanceForm({ role, initialSource }: Props) {
   const [telefono, setTelefono] = React.useState("");
   const [institucion, setInstitucion] = React.useState("");
   const [ciudad, setCiudad] = React.useState("");
+
+  // Campo específico ponente
   const [semillero, setSemillero] = React.useState("");
+  const [tituloPonencia, setTituloPonencia] = React.useState("");
+
+  // Campos específicos evaluador
+  const [ponenciasEvaluadas, setPonenciasEvaluadas] = React.useState<string[]>([]);
+  const [currentPonencia, setCurrentPonencia] = React.useState("");
 
   React.useEffect(() => {
     let mounted = true;
@@ -105,7 +123,6 @@ export default function AttendanceForm({ role, initialSource }: Props) {
       try {
         setLoadingConfig(true);
         const config = await getAttendancePublicConfig();
-
         if (!mounted) return;
         setEnabled(config.enabled);
       } catch (error) {
@@ -116,28 +133,39 @@ export default function AttendanceForm({ role, initialSource }: Props) {
             : "No se pudo verificar si las asistencias estan habilitadas.";
         setFormError(message);
         toast.error(message);
-
         if (!mounted) return;
         setEnabled(false);
       } finally {
-        if (mounted) {
-          setLoadingConfig(false);
-        }
+        if (mounted) setLoadingConfig(false);
       }
     }
 
     loadConfig();
-
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
+
+  function addPonencia() {
+    const trimmed = currentPonencia.trim();
+    if (!trimmed) return;
+    if (ponenciasEvaluadas.length >= MAX_PONENCIAS) return;
+    setPonenciasEvaluadas((prev) => [...prev, toUpperInput(trimmed)]);
+    setCurrentPonencia("");
+  }
+
+  function removePonencia(index: number) {
+    setPonenciasEvaluadas((prev) => prev.filter((_, i) => i !== index));
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!enabled) {
       toast.error("El registro de asistencias no esta habilitado.");
+      return;
+    }
+
+    if (role === "evaluador" && ponenciasEvaluadas.length === 0) {
+      toast.error("Debes agregar al menos una ponencia evaluada.");
       return;
     }
 
@@ -154,7 +182,9 @@ export default function AttendanceForm({ role, initialSource }: Props) {
         telefono,
         institucion,
         ciudad,
-        semillero,
+        semillero: role === "ponente" ? semillero : undefined,
+        tituloPonencia: role === "ponente" ? tituloPonencia : undefined,
+        ponenciasEvaluadas: role === "evaluador" ? ponenciasEvaluadas : undefined,
         source,
       });
 
@@ -163,9 +193,7 @@ export default function AttendanceForm({ role, initialSource }: Props) {
     } catch (error) {
       console.error(error);
       const message =
-        error instanceof Error
-          ? error.message
-          : "No se pudo registrar la asistencia.";
+        error instanceof Error ? error.message : "No se pudo registrar la asistencia.";
       setFormError(message);
       toast.error(message);
     } finally {
@@ -174,7 +202,7 @@ export default function AttendanceForm({ role, initialSource }: Props) {
   }
 
   if (loadingConfig) {
-    return <AttendanceConfigLoader roleLabel={meta.label} />;
+    return <AttendanceConfigLoader />;
   }
 
   if (!enabled) {
@@ -193,7 +221,6 @@ export default function AttendanceForm({ role, initialSource }: Props) {
           >
             Volver
           </button>
-
           <span className="text-xs opacity-75">Asistencias deshabilitadas.</span>
         </div>
 
@@ -227,12 +254,10 @@ export default function AttendanceForm({ role, initialSource }: Props) {
           <h2 className="text-2xl font-bold tracking-tight">
             Las asistencias no estan habilitadas
           </h2>
-
           <p className="mx-auto mt-3 max-w-2xl text-sm opacity-80">
-            Cuando el equipo administrativo habilite el registro, este enlace
-            volvera a estar disponible para {meta.label.toLowerCase()}s.
+            Cuando el equipo administrativo habilite el registro, este enlace volvera a estar
+            disponible.
           </p>
-
           <div className="mt-5 flex justify-center">
             <Link
               href="/"
@@ -258,7 +283,6 @@ export default function AttendanceForm({ role, initialSource }: Props) {
           title="Asistencia registrada"
           desc="Tu informacion ya fue guardada correctamente para el control del evento."
         />
-
         <div
           className="rounded-2xl border p-6 text-center"
           style={{
@@ -276,11 +300,9 @@ export default function AttendanceForm({ role, initialSource }: Props) {
             Gracias por registrar tu asistencia
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-sm opacity-80">
-            Esta asistencia es importante para la generacion del certificado.
-            Unos dias despues del evento podras descargarlo desde la pagina del
-            congreso.
+            Esta asistencia es importante para la generacion del certificado. Unos dias despues
+            del evento podras descargarlo desde la pagina del congreso.
           </p>
-
           <div className="mt-5 flex justify-center">
             <Link
               href="/"
@@ -314,14 +336,13 @@ export default function AttendanceForm({ role, initialSource }: Props) {
         >
           Volver
         </button>
-
         <span className="text-xs opacity-75">
           Acceso detectado: {source === "qr" ? "QR" : "boton directo"}
         </span>
       </div>
 
       <Divider
-        title={meta.title}
+        title="Registro de asistencia"
         desc="Completa los siguientes datos para dejar la asistencia registrada en la base de datos del evento."
       />
 
@@ -350,6 +371,17 @@ export default function AttendanceForm({ role, initialSource }: Props) {
             </button>
           </div>
         </div>
+      ) : null}
+
+      {/* Selector de rol (solo cuando no viene desde la URL) */}
+      {!roleProp ? (
+        <SelectField
+          label="Rol en el evento"
+          value={selectedRole}
+          onChange={(v) => setSelectedRole(v as AttendanceRole)}
+          options={ROLE_OPTIONS}
+          required
+        />
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -403,18 +435,119 @@ export default function AttendanceForm({ role, initialSource }: Props) {
           onChange={(value) => setCiudad(toUpperInput(value))}
           required
         />
+
+        {/* Campos específicos para ponente */}
         {role === "ponente" ? (
-          <Field
-            label="Semillero"
-            value={semillero}
-            onChange={(value) => setSemillero(toUpperInput(value))}
-          />
+          <>
+            <Field
+              label="Titulo de la ponencia"
+              value={tituloPonencia}
+              onChange={(value) => setTituloPonencia(toUpperInput(value))}
+              required
+            />
+            <Field
+              label="Semillero o grupo de investigacion"
+              value={semillero}
+              onChange={(value) => setSemillero(toUpperInput(value))}
+            />
+          </>
         ) : null}
       </div>
 
+      {/* Sección dinámica para evaluador */}
+      {role === "evaluador" ? (
+        <div
+          className="rounded-2xl border p-5"
+          style={{
+            background: "var(--congreso-surface)",
+            borderColor: "var(--congreso-border)",
+          }}
+        >
+          <p className="mb-1 text-sm font-semibold">
+            Ponencias evaluadas{" "}
+            <span style={{ color: "var(--congreso-primary)" }}>*</span>
+          </p>
+          <p className="mb-4 text-xs opacity-70">
+            Agrega los titulos de las ponencias que evaluaste (minimo 1, maximo {MAX_PONENCIAS}).
+          </p>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Titulo de la ponencia"
+              value={currentPonencia}
+              onChange={(e) => setCurrentPonencia(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addPonencia();
+                }
+              }}
+              disabled={ponenciasEvaluadas.length >= MAX_PONENCIAS}
+              className="flex-1 rounded-xl border px-4 py-2 text-sm"
+              style={{
+                background: "rgba(255,255,255,0.8)",
+                borderColor: "var(--congreso-border)",
+                color: "var(--congreso-text)",
+              }}
+            />
+            <button
+              type="button"
+              onClick={addPonencia}
+              disabled={!currentPonencia.trim() || ponenciasEvaluadas.length >= MAX_PONENCIAS}
+              className="inline-flex items-center gap-1 rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+              style={{ background: "var(--congreso-primary)" }}
+            >
+              <Plus size={15} />
+              Agregar
+            </button>
+          </div>
+
+          {ponenciasEvaluadas.length > 0 ? (
+            <ul className="mt-4 grid gap-2">
+              {ponenciasEvaluadas.map((ponencia, index) => (
+                <li
+                  key={index}
+                  className="flex items-center justify-between gap-3 rounded-xl border px-4 py-2 text-sm"
+                  style={{
+                    background: "rgba(119,7,172,0.05)",
+                    borderColor: "rgba(119,7,172,0.18)",
+                  }}
+                >
+                  <span className="flex-1 font-medium" style={{ color: "var(--congreso-text)" }}>
+                    <span
+                      className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white"
+                      style={{ background: "var(--congreso-primary)" }}
+                    >
+                      {index + 1}
+                    </span>
+                    {ponencia}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removePonencia(index)}
+                    className="rounded-lg p-1 opacity-60 transition-opacity hover:opacity-100"
+                    style={{ color: "#8a1f16" }}
+                    aria-label="Eliminar ponencia"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-xs opacity-50">Aun no has agregado ninguna ponencia.</p>
+          )}
+
+          <p className="mt-3 text-right text-xs opacity-50">
+            {ponenciasEvaluadas.length} / {MAX_PONENCIAS}
+          </p>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm opacity-75">
-          Al enviar este formulario quedara registrada una asistencia para el rol de{" "}
+          Al enviar quedara registrada una asistencia para el rol de{" "}
           <strong>{meta.label.toLowerCase()}</strong>.
         </p>
         <SubmitButton loading={submitting}>Registrar asistencia</SubmitButton>

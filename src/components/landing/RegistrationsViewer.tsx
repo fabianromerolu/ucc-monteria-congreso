@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { ChevronDown } from "lucide-react";
 import toast from "react-hot-toast";
 import type ExcelJS from "exceljs";
 
@@ -8,8 +9,10 @@ import EvaluadoresPanelModal from "./EvaluadoresPanelModal";
 import LatePonenciaPanelModal from "./LatePonenciaPanelModal";
 import { getAdminRegistros, asignarEvaluadoresTardias } from "@/src/services/admin.service";
 import {
+  clearAllAttendanceRecords,
   clearGeneratedAttendanceCertificates,
   createAdminAttendanceRecord,
+  deleteAttendanceRecord,
   deleteGeneratedAttendanceCertificate,
   getAdminAttendanceSnapshot,
   regenerateAttendanceCertificate,
@@ -725,6 +728,42 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
+function AccordionTable({
+  title,
+  count,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  count: number;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <details open={open} className="rv-table-shell overflow-hidden rounded-3xl border">
+      <summary
+        onClick={(e) => {
+          e.preventDefault();
+          onToggle();
+        }}
+        className="rv-table-header group flex w-full cursor-pointer list-none items-center justify-center gap-3 border-b px-5 py-5 text-center transition-colors [&::-webkit-details-marker]:hidden"
+      >
+        <span className="rv-text-main text-base font-bold">{title}</span>
+        <span className="rv-chip inline-flex rounded-full px-2.5 py-1 text-xs font-semibold">
+          {count} registros
+        </span>
+        <ChevronDown
+          size={18}
+          className={`rv-text-main shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
+      </summary>
+      {open ? <div className="overflow-x-auto">{children}</div> : null}
+    </details>
+  );
+}
+
 function Chip({ children }: { children: React.ReactNode }) {
   return (
     <span className="rv-chip inline-flex rounded-full px-2.5 py-1 text-xs font-semibold">
@@ -1335,9 +1374,17 @@ export default function RegistrationsViewer({
   const [togglingAttendance, setTogglingAttendance] = React.useState(false);
   const [sendingCertificates, setSendingCertificates] = React.useState(false);
   const [deletingCertificates, setDeletingCertificates] = React.useState(false);
+  const [deletingAttendance, setDeletingAttendance] = React.useState(false);
+  const [deletingAttendanceId, setDeletingAttendanceId] = React.useState<string | null>(null);
   const [creatingManualAttendance, setCreatingManualAttendance] = React.useState(false);
   const [regeneratingCertificateId, setRegeneratingCertificateId] =
     React.useState<string | null>(null);
+  const [expandedSections, setExpandedSections] = React.useState<Record<TabKey, boolean>>({
+    ponentes: false,
+    evaluadores: false,
+    asistentes: false,
+    asistencias: false,
+  });
   const [certificateResult, setCertificateResult] =
     React.useState<AttendanceCertificateDispatchResponse | null>(null);
   const [assigningTardias, setAssigningTardias] = React.useState(false);
@@ -1589,6 +1636,58 @@ export default function RegistrationsViewer({
       throw new Error(message);
     } finally {
       setDeletingCertificates(false);
+    }
+  }
+
+  async function handleDeleteAllAttendance() {
+    if (!adminCode) {
+      const message =
+        "No se encontro NEXT_PUBLIC_ADMIN_PANEL_CODE ni NEXT_PUBLIC_EVALUADORES_PANEL_CODE.";
+      toast.error(message);
+      throw new Error(message);
+    }
+
+    try {
+      setDeletingAttendance(true);
+      await clearAllAttendanceRecords(adminCode);
+      toast.success("Todos los registros de asistencia fueron eliminados.");
+      await loadAttendanceAdminData();
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudieron eliminar los registros de asistencia.";
+      toast.error(message);
+      throw new Error(message);
+    } finally {
+      setDeletingAttendance(false);
+    }
+  }
+
+  async function handleDeleteAttendanceRecord(record: AttendanceRecord) {
+    if (!adminCode) {
+      const message =
+        "No se encontro NEXT_PUBLIC_ADMIN_PANEL_CODE ni NEXT_PUBLIC_EVALUADORES_PANEL_CODE.";
+      toast.error(message);
+      throw new Error(message);
+    }
+
+    try {
+      setDeletingAttendanceId(record.id);
+      await deleteAttendanceRecord(record, adminCode);
+      toast.success("Registro de asistencia eliminado.");
+      await loadAttendanceAdminData();
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo eliminar el registro de asistencia.";
+      toast.error(message);
+      throw new Error(message);
+    } finally {
+      setDeletingAttendanceId(null);
     }
   }
 
@@ -1899,51 +1998,99 @@ export default function RegistrationsViewer({
         ) : !data ? (
           <EmptyState message="No fue posible obtener la información." />
         ) : activeTab === "ponentes" ? (
-          filteredPonentes.length ? (
-            <PonentesTable
-              rows={filteredPonentes}
-              duplicateDocs={duplicatePonenteDocs}
-              duplicateNames={duplicatePonenteNames}
-              duplicateTitles={duplicatePonenciaTitles}
-              isPanelAuthorized={isPanelAuthorized}
-            />
-          ) : (
-            <EmptyState message="No se encontraron ponencias con ese criterio de búsqueda o eje temático." />
-          )
+          <AccordionTable
+            title="Ponencias registradas"
+            count={filteredPonentes.length}
+            open={expandedSections.ponentes}
+            onToggle={() =>
+              setExpandedSections((prev) => ({ ...prev, ponentes: !prev.ponentes }))
+            }
+          >
+            {filteredPonentes.length ? (
+              <PonentesTable
+                rows={filteredPonentes}
+                duplicateDocs={duplicatePonenteDocs}
+                duplicateNames={duplicatePonenteNames}
+                duplicateTitles={duplicatePonenciaTitles}
+                isPanelAuthorized={isPanelAuthorized}
+              />
+            ) : (
+              <EmptyState message="No se encontraron ponencias con ese criterio de búsqueda o eje temático." />
+            )}
+          </AccordionTable>
         ) : activeTab === "evaluadores" ? (
           !isPanelAuthorized ? (
             <EmptyState message="Debes ingresar el código en el panel para visualizar los evaluadores." />
-          ) : filteredEvaluadores.length ? (
-            <EvaluadoresTable
-              rows={filteredEvaluadores}
-              duplicateDocs={duplicateEvaluadorDocs}
-              duplicateNames={duplicateEvaluadorNames}
-            />
           ) : (
-            <EmptyState message="No se encontraron evaluadores con ese criterio de búsqueda." />
+            <AccordionTable
+              title="Evaluadores registrados"
+              count={filteredEvaluadores.length}
+              open={expandedSections.evaluadores}
+              onToggle={() =>
+                setExpandedSections((prev) => ({
+                  ...prev,
+                  evaluadores: !prev.evaluadores,
+                }))
+              }
+            >
+              {filteredEvaluadores.length ? (
+                <EvaluadoresTable
+                  rows={filteredEvaluadores}
+                  duplicateDocs={duplicateEvaluadorDocs}
+                  duplicateNames={duplicateEvaluadorNames}
+                />
+              ) : (
+                <EmptyState message="No se encontraron evaluadores con ese criterio de búsqueda." />
+              )}
+            </AccordionTable>
           )
-        ) : activeTab === "asistentes" ? filteredAsistentes.length ? (
-          <AsistentesTable
-            rows={filteredAsistentes}
-            duplicateDocs={duplicateAsistenteDocs}
-            duplicateNames={duplicateAsistenteNames}
-          />
-        ) : (
-          <EmptyState message="No se encontraron asistentes con ese criterio de búsqueda." />
+        ) : activeTab === "asistentes" ? (
+          <AccordionTable
+            title="Asistentes registrados"
+            count={filteredAsistentes.length}
+            open={expandedSections.asistentes}
+            onToggle={() =>
+              setExpandedSections((prev) => ({ ...prev, asistentes: !prev.asistentes }))
+            }
+          >
+            {filteredAsistentes.length ? (
+              <AsistentesTable
+                rows={filteredAsistentes}
+                duplicateDocs={duplicateAsistenteDocs}
+                duplicateNames={duplicateAsistenteNames}
+              />
+            ) : (
+              <EmptyState message="No se encontraron asistentes con ese criterio de búsqueda." />
+            )}
+          </AccordionTable>
         ) : !isPanelAuthorized ? (
           <EmptyState message="Debes ingresar el codigo en el panel para visualizar las asistencias y generar certificados." />
         ) : attendanceLoading ? (
           <LoaderCard />
         ) : attendanceError ? (
           <EmptyState message={attendanceError} />
-        ) : filteredAttendance.length ? (
-          <AttendanceTable
-            rows={filteredAttendance}
-            duplicateDocs={duplicateAttendanceDocs}
-            duplicateNames={duplicateAttendanceNames}
-          />
         ) : (
-          <EmptyState message="No se encontraron registros de asistencia con ese criterio." />
+          <AccordionTable
+            title="Registros de asistencia"
+            count={filteredAttendance.length}
+            open={expandedSections.asistencias}
+            onToggle={() =>
+              setExpandedSections((prev) => ({
+                ...prev,
+                asistencias: !prev.asistencias,
+              }))
+            }
+          >
+            {filteredAttendance.length ? (
+              <AttendanceTable
+                rows={filteredAttendance}
+                duplicateDocs={duplicateAttendanceDocs}
+                duplicateNames={duplicateAttendanceNames}
+              />
+            ) : (
+              <EmptyState message="No se encontraron registros de asistencia con ese criterio." />
+            )}
+          </AccordionTable>
         )}
       </div>
 
@@ -1979,6 +2126,10 @@ export default function RegistrationsViewer({
         onCreateManualAttendance={handleCreateManualAttendance}
         onDeleteAndRegenerateCertificate={handleDeleteAndRegenerateCertificate}
         onAsignarEvaluadoresTardias={handleAsignarEvaluadoresTardias}
+        deletingAttendance={deletingAttendance}
+        deletingAttendanceId={deletingAttendanceId}
+        onDeleteAllAttendance={handleDeleteAllAttendance}
+        onDeleteAttendanceRecord={handleDeleteAttendanceRecord}
         onOpenLatePonenciaForm={() => {
           setPanelOpen(false);
           setLatePonenciaOpen(true);

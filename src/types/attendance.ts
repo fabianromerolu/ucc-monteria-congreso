@@ -29,6 +29,8 @@ export type AttendanceInput = {
   institucion: string;
   ciudad: string;
   semillero?: string;
+  tituloPonencia?: string;
+  ponenciasEvaluadas?: string[];
   source: AttendanceSource;
 };
 

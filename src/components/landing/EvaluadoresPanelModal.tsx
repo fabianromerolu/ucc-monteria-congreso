@@ -108,6 +108,10 @@ type Props = {
   onDeleteAndRegenerateCertificate: (record: AttendanceRecord) => Promise<void>;
   onOpenLatePonenciaForm: () => void;
   onAsignarEvaluadoresTardias: () => void;
+  deletingAttendance: boolean;
+  deletingAttendanceId: string | null;
+  onDeleteAllAttendance: () => Promise<void>;
+  onDeleteAttendanceRecord: (record: AttendanceRecord) => Promise<void>;
 };
 
 function numberLabel(value?: number | null) {
@@ -393,6 +397,10 @@ export default function EvaluadoresPanelModal({
   onDeleteAndRegenerateCertificate,
   onOpenLatePonenciaForm,
   onAsignarEvaluadoresTardias,
+  deletingAttendance,
+  deletingAttendanceId,
+  onDeleteAllAttendance,
+  onDeleteAttendanceRecord,
 }: Props) {
   const [manualOpen, setManualOpen] = React.useState(false);
   const [manualForm, setManualForm] = React.useState<ManualAttendanceForm>(() =>
@@ -520,6 +528,40 @@ export default function EvaluadoresPanelModal({
         error instanceof Error
           ? error.message
           : "No se pudieron borrar los certificados generados.",
+      );
+    }
+  }
+
+  async function handleDeleteAllAttendanceRecords() {
+    const confirmed = window.confirm(
+      "Esta accion eliminara TODOS los registros de asistencia permanentemente. Deseas continuar?",
+    );
+    if (!confirmed) return;
+    try {
+      setMaintenanceError(null);
+      await onDeleteAllAttendance();
+    } catch (error) {
+      setMaintenanceError(
+        error instanceof Error
+          ? error.message
+          : "No se pudieron eliminar los registros de asistencia.",
+      );
+    }
+  }
+
+  async function handleDeleteSingleAttendance(record: AttendanceRecord) {
+    const confirmed = window.confirm(
+      `Se eliminara el registro de asistencia de ${getAttendanceFullName(record)}. Deseas continuar?`,
+    );
+    if (!confirmed) return;
+    try {
+      setMaintenanceError(null);
+      await onDeleteAttendanceRecord(record);
+    } catch (error) {
+      setMaintenanceError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo eliminar el registro de asistencia.",
       );
     }
   }
@@ -849,6 +891,106 @@ export default function EvaluadoresPanelModal({
                           <tr>
                             <td colSpan={5} className="px-4 py-8 text-center opacity-70">
                               Aun no hay certificados generados para listar.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </PanelSection>
+
+              <PanelSection title="Mantenimiento de asistencias" icon={Trash2}>
+                <div className="mb-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_260px] md:items-center">
+                  <div>
+                    <p className="text-sm font-semibold">
+                      Asistencias registradas actualmente:{" "}
+                      <span className="text-lg font-black">
+                        {numberLabel(totalAttendance)}
+                      </span>
+                    </p>
+                    <p className="mt-1 text-sm opacity-70">
+                      Elimina registros de asistencia de forma individual o borra todos
+                      de una vez. Esta accion tambien elimina el certificado generado del registro.
+                    </p>
+                  </div>
+                  <PanelActionButton
+                    icon={Trash2}
+                    onClick={handleDeleteAllAttendanceRecords}
+                    disabled={deletingAttendance || totalAttendance === 0}
+                    variant="danger"
+                  >
+                    {deletingAttendance ? "Eliminando..." : "Eliminar todos"}
+                  </PanelActionButton>
+                </div>
+
+                {maintenanceError ? (
+                  <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm font-semibold text-red-800">
+                    {maintenanceError}
+                  </div>
+                ) : null}
+
+                <div className="panel-table-shell overflow-hidden rounded-2xl border">
+                  <div className="max-h-90 overflow-auto">
+                    <table className="w-full min-w-200 text-sm">
+                      <thead className="rv-thead sticky top-0 z-10">
+                        <tr className="text-left">
+                          <th className="px-4 py-3 font-semibold">Tipo</th>
+                          <th className="px-4 py-3 font-semibold">Cedula</th>
+                          <th className="px-4 py-3 font-semibold">Nombre</th>
+                          <th className="px-4 py-3 font-semibold">Correo</th>
+                          <th className="px-4 py-3 font-semibold">Certificado</th>
+                          <th className="px-4 py-3 font-semibold">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {attendanceRecords.length ? (
+                          attendanceRecords.map((record, index) => {
+                            const isBusy = deletingAttendanceId === record.id;
+
+                            return (
+                              <tr
+                                key={record.id}
+                                className={`border-t ${index % 2 === 0 ? "rv-row-even" : "rv-row-odd"}`}
+                              >
+                                <td className="px-4 py-3">
+                                  <span className="rv-chip rounded-full px-3 py-1 text-xs font-bold">
+                                    {getRoleLabel(record.role)}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 font-semibold">
+                                  {record.documento}
+                                </td>
+                                <td className="px-4 py-3">
+                                  {getAttendanceFullName(record)}
+                                </td>
+                                <td className="px-4 py-3">{record.email}</td>
+                                <td className="px-4 py-3">
+                                  <span className="rv-chip rounded-full px-3 py-1 text-xs font-bold">
+                                    {record.certificateStatus === "sent"
+                                      ? "Generado"
+                                      : record.certificateStatus === "error"
+                                        ? "Error"
+                                        : "Pendiente"}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <SmallIconButton
+                                    icon={isBusy ? Loader2 : Trash2}
+                                    onClick={() => handleDeleteSingleAttendance(record)}
+                                    disabled={isBusy || deletingAttendance}
+                                    variant="danger"
+                                  >
+                                    {isBusy ? "Eliminando..." : "Eliminar"}
+                                  </SmallIconButton>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <tr>
+                            <td colSpan={6} className="px-4 py-8 text-center opacity-70">
+                              No hay registros de asistencia.
                             </td>
                           </tr>
                         )}

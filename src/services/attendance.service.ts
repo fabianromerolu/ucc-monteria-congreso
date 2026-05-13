@@ -128,6 +128,11 @@ export async function registerAttendance(data: AttendanceInput): Promise<void> {
         institucion: data.institucion,
         ciudad: data.ciudad,
         semillero: data.semillero,
+        tituloPonencia: data.tituloPonencia,
+        ponenciasEvaluadas:
+          data.ponenciasEvaluadas && data.ponenciasEvaluadas.length > 0
+            ? data.ponenciasEvaluadas
+            : undefined,
         source: data.source,
       }),
     ),
@@ -505,6 +510,45 @@ export async function createAdminAttendanceRecord(
   }
 
   throw new Error(lastError);
+}
+
+export async function deleteAttendanceRecord(
+  record: AttendanceRecord,
+  adminCode: string,
+): Promise<void> {
+  const baseUrl = getBackendBaseUrl();
+  const response = await fetch(
+    `${baseUrl}/administracion/asistencias/registros/${record.id}`,
+    {
+      method: "DELETE",
+      headers: buildAdminHeaders(adminCode),
+    },
+  );
+
+  if (!response.ok) {
+    const errorData = await readJsonSafe(response);
+    throw new Error(
+      getApiErrorMessage(errorData, "No se pudo eliminar el registro de asistencia."),
+    );
+  }
+}
+
+export async function clearAllAttendanceRecords(adminCode: string): Promise<void> {
+  const baseUrl = getBackendBaseUrl();
+  const response = await fetch(`${baseUrl}/administracion/asistencias/registros`, {
+    method: "DELETE",
+    headers: buildAdminHeaders(adminCode),
+  });
+
+  if (!response.ok) {
+    const errorData = await readJsonSafe(response);
+    throw new Error(
+      getApiErrorMessage(
+        errorData,
+        "No se pudieron eliminar los registros de asistencia.",
+      ),
+    );
+  }
 }
 
 export async function lookupAttendanceCertificate(
